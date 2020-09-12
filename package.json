@@ -4,12 +4,14 @@
   "description": "",
   "main": "parser.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "bson": "^4.1.0"
+    "bson": "^4.1.0",
+    "chai": "^4.2.0",
+    "mocha": "^8.1.3"
   }
 }

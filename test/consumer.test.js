@@ -1,4 +1,7 @@
 const BSON = require('bson');
+const { expect } = require('chai');
+
+const { consume } = require('../src/consumer.js')
 
 /** @type {Buffer} */
 const test = new BSON.serialize({
@@ -16,8 +19,9 @@ const test = new BSON.serialize({
 const array = new Uint8Array(test.length)
 array.set(test)
 
-import('./consumer.mjs').then(({consume}) => {
-    const {bsonDocument} = consume(array)
-    console.dir(bsonDocument)
-    // console.log([...bsonDocument.keys()])
-}).catch(console.error)
+describe('Consumer', async function () {
+    it('will match the reference implementation', async function() {
+        const { bsonDocument } = consume(array)
+        expect(Object.fromEntries(bsonDocument.entries())).to.have.property('double').and.equals(2.3)
+    })
+})

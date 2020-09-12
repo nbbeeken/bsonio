@@ -23,7 +23,7 @@ const TYPE_MIN_KEY = 0xFF
 const TYPE_MAX_KEY = 0x7F
 
 /** @param {Uint8Array} sequence binary */
-export function consume(sequence, offset = 0) {
+function consume(sequence, offset = 0) {
     const bsonDocument = new Map()
 
     const view = new DataView(sequence.buffer, offset)
@@ -175,4 +175,9 @@ function mapToArray(map) {
         list[+key] = value
     }
     return list
+}
+
+
+module.exports = {
+    consume
 }

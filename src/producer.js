@@ -29,12 +29,13 @@ const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
  *  @property {number} type
  *  @property {any} value
  *  @property {number} size
+ *  @property {Uint8Array} [bytes] in order to calculate the size this value had to be made into bytes, here's the results for your convenience
  */
 
 /**
  * @param {Record<string, any>} document
  */
-export function convertPOJOtoMap(document) {
+function convertPOJOtoMap(document) {
     const map = new Map()
     for (const [key, value] of Object.entries(document)) {
         map.set(key, bsonDescriptorFrom(value))
@@ -46,6 +47,7 @@ export function convertPOJOtoMap(document) {
 function bsonDescriptorFrom(value) {
     let type
     let size
+    let bytes
 
     switch (typeof value) {
         case 'number':
@@ -64,6 +66,8 @@ function bsonDescriptorFrom(value) {
             break
         case 'string':
             type = TYPE_STRING
+            bytes = encoder.encode(value + '\x00')
+            size = bytes.byteLength + 4
             break
         case 'bigint':
             if (value < INT64_MAX) {
@@ -102,17 +106,48 @@ function bsonDescriptorFrom(value) {
     }
 
     if (type === TYPE_DOCUMENT) {
-        // Attempt to narrow, it could be something else.
+        if (value instanceof RegExp) {
+            type = TYPE_REGEX
+            value = { regex: value, flags: '' }
+        } else if (value instanceof Date) {
+            type = TYPE_UTC_DATE
+        } else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
+            type = TYPE_BINARY
+        } else if (Reflect.has(value, '_bsontype')) {
+                switch (Reflect.get(value, '_bsontype')) {
+                    case 'ObjectId':
+                    case 'ObjectID':
+                        type = TYPE_OBJECTID
+                        break
+                    case 'DBRef':
+                        type = TYPE_DB_POINTER
+                        break
+                    case 'Code':
+                        type = Reflect.has(value, 'scope') ? TYPE_CODE_WITH_SCOPE : TYPE_CODE
+                        break
+                    case 'Timestamp':
+                        type = TYPE_TIMESTAMP
+                        break
+                    case 'MinKey':
+                        type = TYPE_MIN_KEY
+                        break
+                    case 'MaxKey':
+                        type = TYPE_MAX_KEY
+                        break
+                }
+
+            }
     }
 
-    return { type, value, size }
+    if (!bytes) return { type, value, size }
+    return { type, value, size, bytes }
 }
 
 const encoder = new TextEncoder()
 
 /** @param {Map<string, {type: number, value: any, size: number}>} map */
-export function produce(map) {
-    const documentSize = calculateSize(map);
+function produce(map) {
+    const documentSize = calculateSize(map)
     const array = new Uint8Array(documentSize)
     const view = new DataView(array.buffer)
     view.setInt32(0, documentSize, true)
@@ -129,18 +164,18 @@ export function produce(map) {
     return array
 }
 
-export function utf8StringLength(str) {
-    return encoder.encode(str).length;
+function utf8StringLength(str) {
+    return encoder.encode(str).byteLength;
 }
 
-export function calculateSize(map) {
+/** @param {Map<string, BSONValueDescriptor>} map */
+function calculateSize(map) {
     let documentSize = 5
     for (const [key, value] of map.entries()) {
-        documentSize += encoder.encode(key).length + 1 // null terminator
+        documentSize += utf8StringLength(key) + 1 // null terminator
         documentSize += 1 // type indicator
         documentSize += value.size
     }
-    documentSize += 1 // document terminator
     return documentSize
 }
 
@@ -154,10 +189,29 @@ function writeCString(buffer, index, cString) {
 /**
  *
  * @param {Uint8Array} array
- * @param index
- * @param descriptor
+ * @param {number} index
+ * @param {BSONValueDescriptor} descriptor
  */
 function writeBSONValue(array, index, descriptor) {
     const view = new DataView(array.buffer)
-    view.setFloat64(index, descriptor.value, true)
+    switch (descriptor.type) {
+        case TYPE_DOUBLE:
+            view.setFloat64(index, descriptor.value, true)
+            break
+        case TYPE_STRING:
+            view.setInt32(index, descriptor.bytes.byteLength, true)
+            index += 4
+            array.set(descriptor.bytes, index)
+            break
+        case TYPE_INT64:
+            view.setBigInt64(index, descriptor.value, true)
+        default:
+            break
+    }
+}
+
+module.exports = {
+    convertPOJOtoMap,
+    produce,
+    calculateSize,
 }
