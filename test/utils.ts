@@ -13,3 +13,16 @@ export function expect(condition: any) {
     }
     return result
 }
+
+const ENABLE_LOGGING = true
+
+export function log(message: any) {
+    if (ENABLE_LOGGING) console.log(message)
+}
+
+export function logObject(message: string, obj: any) {
+    if (ENABLE_LOGGING) {
+        console.log(message)
+        console.dir(obj)
+    }
+}

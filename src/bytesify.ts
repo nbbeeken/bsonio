@@ -5,7 +5,7 @@ export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
 interface BSONValueDescriptor {
     type: number,
     value: any,
-    size?: number,
+    size: number,
     /** In order to calculate the size this value had to be made into bytes, here's the results for your convenience */
     bytes?: Uint8Array
 }
@@ -25,7 +25,7 @@ function convertPOJOtoMap(document: Record<string, any>) {
 /** Create a value descriptor that explains the BSON value. */
 function bsonDescriptorFrom(value: any): BSONValueDescriptor {
     let type
-    let size
+    let size = NaN
     let bytes
 
     switch (typeof value) {
@@ -159,7 +159,7 @@ function calculateSize(map: Map<string, BSONValueDescriptor>) {
     for (const [key, value] of map.entries()) {
         documentSize += utf8StringLength(key) + 1 // null terminator
         documentSize += 1 // type indicator
-        documentSize += value.size!
+        documentSize += value.size
     }
     return documentSize
 }
@@ -178,7 +178,7 @@ function writeBSONValue(array: Uint8Array, index: number, descriptor: BSONValueD
             view.setFloat64(index, descriptor.value, true)
             break
         case TYPE.DOCUMENT:
-            view.setInt32(index, descriptor.size!, true)
+            view.setInt32(index, descriptor.size, true)
             break
         case TYPE.STRING:
             view.setInt32(index, descriptor.bytes!.byteLength, true)

@@ -1,10 +1,49 @@
 import { TYPE } from './constants'
 
+export function parse(sequence: Uint8Array) {
+    const o = Object.create(null)
+    delete o.__proto__
+    // const entries = parse_internal(sequence).bsonDocument.entries()
+    // for (const [key, value] of entries) {
+    //     o[key] = value
+    // }
+    const p = new Proxy(o, new BSONProxyHandler(parse_internal(sequence)))
+    return p
+}
+
+class BSONProxyHandler implements ProxyHandler<any> {
+    #bsonDocument: Map<PropertyKey, any>
+    #documentSize: number
+    constructor(documentInfo: ReturnType<typeof parse_internal>) {
+        this.#bsonDocument = documentInfo.bsonDocument
+        this.#documentSize = documentInfo.documentSize
+    }
+
+    has(target: this, p: PropertyKey) { return this.#bsonDocument.has(p) }
+
+    get(target: this, p: PropertyKey, receiver: any) { return this.#bsonDocument.get(p) }
+
+    set(target: this, p: PropertyKey, value: any, receiver: any) { return !!this.#bsonDocument.set(p, value) }
+
+    ownKeys(target: any) { return [...this.#bsonDocument.keys()] }
+
+    getOwnPropertyDescriptor(target: any, p: PropertyKey): PropertyDescriptor {
+        if (!this.#bsonDocument.has(p)) {
+            return { configurable: false, enumerable: false, writable: false, value: undefined }
+        }
+        return {
+            enumerable: true,
+            configurable: true,
+        }
+    }
+    enumerate(target: any) { return [...this.#bsonDocument.keys()] }
+}
+
 /**
  * Read BSON Bytes and produce a map with information about the BSON.
  * @param sequence - bson bytes
  */
-export function parse(sequence: Uint8Array, offset = 0) {
+function parse_internal(sequence: Uint8Array, offset = 0) {
     const bsonDocument = new Map()
 
     const view = new DataView(sequence.buffer, offset)
@@ -46,13 +85,13 @@ export function parse(sequence: Uint8Array, offset = 0) {
                 break
             }
             case TYPE.DOCUMENT: {
-                const { bsonDocument: v, documentSize: embedSize } = parse(sequence.subarray(index), index)
+                const { bsonDocument: v, documentSize: embedSize } = parse_internal(sequence.subarray(index), index)
                 index += embedSize
                 value = v
                 break
             }
             case TYPE.ARRAY: {
-                const { bsonDocument: v, documentSize: embedSize } = parse(sequence.subarray(index), index)
+                const { bsonDocument: v, documentSize: embedSize } = parse_internal(sequence.subarray(index), index)
                 index += embedSize
                 value = mapToArray(v)
                 break
