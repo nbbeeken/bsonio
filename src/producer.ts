@@ -1,41 +1,18 @@
-//@ts-check
+import { TYPE, INT64_MAX } from './constants'
 
-const TYPE_DOUBLE = 0x01
-const TYPE_STRING = 0x02
-const TYPE_DOCUMENT = 0x03
-const TYPE_ARRAY = 0x04
-const TYPE_BINARY = 0x05
-const TYPE_UNDEFINED = 0x06
-const TYPE_OBJECTID = 0x07
-const TYPE_BOOLEAN = 0x08
-const TYPE_UTC_DATE = 0x09
-const TYPE_NULL = 0x0A
-const TYPE_REGEX = 0x0B
-const TYPE_DB_POINTER = 0x0C
-const TYPE_CODE = 0x0D
-const TYPE_SYMBOL = 0x0E
-const TYPE_CODE_WITH_SCOPE = 0x0F
-const TYPE_INT32 = 0x10
-const TYPE_TIMESTAMP = 0x11
-const TYPE_INT64 = 0x12
-const TYPE_DECIMAL128 = 0x13
-const TYPE_MIN_KEY = 0xFF
-const TYPE_MAX_KEY = 0x7F
-
-const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
+interface BSONValueDescriptor {
+    type: number,
+    value: any,
+    size?: number,
+    /** In order to calculate the size this value had to be made into bytes, here's the results for your convenience */
+    bytes?: Uint8Array
+}
 
 /**
- * @typedef BSONValueDescriptor
- *  @property {number} type
- *  @property {any} value
- *  @property {number} size
- *  @property {Uint8Array} [bytes] in order to calculate the size this value had to be made into bytes, here's the results for your convenience
+ * Convert a Plain Javascript Object to a map with typing information.
+ * @param document - a simple js object
  */
-
-/**
- * @param {Record<string, any>} document
- */
-function convertPOJOtoMap(document) {
+function convertPOJOtoMap(document: Record<string, any>) {
     const map = new Map()
     for (const [key, value] of Object.entries(document)) {
         map.set(key, bsonDescriptorFrom(value))
@@ -43,8 +20,8 @@ function convertPOJOtoMap(document) {
     return map
 }
 
-/** @returns {BSONValueDescriptor} */
-function bsonDescriptorFrom(value) {
+/** Create a value descriptor that explains the BSON value. */
+function bsonDescriptorFrom(value: any): BSONValueDescriptor {
     let type
     let size
     let bytes
@@ -53,90 +30,94 @@ function bsonDescriptorFrom(value) {
         case 'number':
             if (Number.isInteger(value)) {
                 if (value < 0x7FFF_FFFF) {
-                    type = TYPE_INT32
+                    type = TYPE.INT32
                     size = 4
                 } else {
-                    type = TYPE_INT64
+                    type = TYPE.INT64
                     size = 8
                 }
             } else {
-                type = TYPE_DOUBLE
+                type = TYPE.DOUBLE
                 size = 8
             }
             break
         case 'string':
-            type = TYPE_STRING
+            type = TYPE.STRING
             bytes = encoder.encode(value + '\x00')
             size = bytes.byteLength + 4
             break
         case 'bigint':
             if (value < INT64_MAX) {
-                type = TYPE_INT64
+                type = TYPE.INT64
                 size = 8
             } else {
-                type = TYPE_DECIMAL128
+                type = TYPE.DECIMAL128
                 size = 16
             }
             break
         case 'boolean':
-            type = TYPE_BOOLEAN
+            type = TYPE.BOOLEAN
             size = 1
         case 'undefined':
-            type = TYPE_UNDEFINED
+            type = TYPE.UNDEFINED
             size = 0
             break
         case 'symbol':
-            type = TYPE_SYMBOL
+            type = TYPE.SYMBOL
             break
         case 'function':
-            type = TYPE_CODE
+            type = TYPE.CODE
             break
         case 'object':
             if (value === null) {
-                type = TYPE_NULL
+                type = TYPE.NULL
                 size = 0
             } else if (Array.isArray(value)) {
-                type = TYPE_ARRAY
+                type = TYPE.ARRAY
             } else {
-                type = TYPE_DOCUMENT
+                type = TYPE.DOCUMENT
             }
             break
         default: // really unexpected
             throw new Error(`Unable to handle type: ${typeof value}`)
     }
 
-    if (type === TYPE_DOCUMENT) {
+    if (type === TYPE.DOCUMENT) {
         if (value instanceof RegExp) {
-            type = TYPE_REGEX
+            type = TYPE.REGEX
             value = { regex: value, flags: '' }
         } else if (value instanceof Date) {
-            type = TYPE_UTC_DATE
+            type = TYPE.UTC_DATE
         } else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
-            type = TYPE_BINARY
+            type = TYPE.BINARY
         } else if (Reflect.has(value, '_bsontype')) {
                 switch (Reflect.get(value, '_bsontype')) {
                     case 'ObjectId':
                     case 'ObjectID':
-                        type = TYPE_OBJECTID
+                        type = TYPE.OBJECTID
                         break
                     case 'DBRef':
-                        type = TYPE_DB_POINTER
+                        type = TYPE.DB_POINTER
                         break
                     case 'Code':
-                        type = Reflect.has(value, 'scope') ? TYPE_CODE_WITH_SCOPE : TYPE_CODE
+                        type = Reflect.has(value, 'scope') ? TYPE.CODE_WITH_SCOPE : TYPE.CODE
                         break
                     case 'Timestamp':
-                        type = TYPE_TIMESTAMP
+                        type = TYPE.TIMESTAMP
                         break
                     case 'MinKey':
-                        type = TYPE_MIN_KEY
+                        type = TYPE.MIN_KEY
                         break
                     case 'MaxKey':
-                        type = TYPE_MAX_KEY
+                        type = TYPE.MAX_KEY
                         break
                 }
 
             }
+    }
+
+    if(type === TYPE.DOCUMENT) {
+        value = convertPOJOtoMap(value)
     }
 
     if (!bytes) return { type, value, size }
@@ -145,8 +126,7 @@ function bsonDescriptorFrom(value) {
 
 const encoder = new TextEncoder()
 
-/** @param {Map<string, {type: number, value: any, size: number}>} map */
-function produce(map) {
+function produce(map: Map<string, {type: number, value: any, size: number}>) {
     const documentSize = calculateSize(map)
     const array = new Uint8Array(documentSize)
     const view = new DataView(array.buffer)
@@ -164,53 +144,49 @@ function produce(map) {
     return array
 }
 
-function utf8StringLength(str) {
+function utf8StringLength(str: string) {
     return encoder.encode(str).byteLength;
 }
 
-/** @param {Map<string, BSONValueDescriptor>} map */
-function calculateSize(map) {
+function calculateSize(map: Map<string, BSONValueDescriptor>) {
     let documentSize = 5
     for (const [key, value] of map.entries()) {
         documentSize += utf8StringLength(key) + 1 // null terminator
         documentSize += 1 // type indicator
-        documentSize += value.size
+        documentSize += value.size!
     }
     return documentSize
 }
 
-function writeCString(buffer, index, cString) {
+function writeCString(buffer: Uint8Array, index: number, cString: string) {
     const keyAsBytes = encoder.encode(cString)
     buffer.set(keyAsBytes, index)
     buffer.set([0], index + keyAsBytes.length + 1)
     return keyAsBytes.length + 1
 }
 
-/**
- *
- * @param {Uint8Array} array
- * @param {number} index
- * @param {BSONValueDescriptor} descriptor
- */
-function writeBSONValue(array, index, descriptor) {
+function writeBSONValue(array: Uint8Array, index: number, descriptor: BSONValueDescriptor) {
     const view = new DataView(array.buffer)
     switch (descriptor.type) {
-        case TYPE_DOUBLE:
+        case TYPE.DOUBLE:
             view.setFloat64(index, descriptor.value, true)
             break
-        case TYPE_STRING:
-            view.setInt32(index, descriptor.bytes.byteLength, true)
-            index += 4
-            array.set(descriptor.bytes, index)
+        case TYPE.DOCUMENT:
+            view.setInt32(index, descriptor.size!, true)
             break
-        case TYPE_INT64:
+        case TYPE.STRING:
+            view.setInt32(index, descriptor.bytes!.byteLength, true)
+            index += 4
+            array.set(descriptor.bytes!, index)
+            break
+        case TYPE.INT64:
             view.setBigInt64(index, descriptor.value, true)
         default:
             break
     }
 }
 
-module.exports = {
+export {
     convertPOJOtoMap,
     produce,
     calculateSize,

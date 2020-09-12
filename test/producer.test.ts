@@ -1,8 +1,8 @@
-const BSON = require('bson');
-const { expect } = require('chai');
-const { toHexString } = require('./helpers.js')
-const { convertPOJOtoMap, produce } = require('../src/producer.js')
-const { consume } = require('../src/consumer.js')
+import * as BSON from 'bson'
+import { expect } from 'chai';
+import { toHexString } from './helpers'
+import { convertPOJOtoMap, produce } from '../src/producer'
+import { consume } from '../src/consumer'
 
 describe('Producer', function () {
 
@@ -15,13 +15,16 @@ describe('Producer', function () {
             b: 1.3,
             c: 'hello',
             d: 23n,
+            e: {
+                a: 1.2
+            }
         }
 
         const map = convertPOJOtoMap(test);
-        // console.log(map)
+        console.log(map)
         const bytes = produce(map)
         console.log(toHexString(bytes))
-        // expect(toHexString(bytes)).to.equal(toHexString(BSON.serialize(test)))
+        expect(toHexString(bytes)).to.equal(toHexString(BSON.serialize(test)))
         console.log(Object.fromEntries(consume(bytes).bsonDocument.entries()))
     })
 })

@@ -1,0 +1,25 @@
+export const enum TYPE {
+    DOUBLE = 0x01,
+    STRING = 0x02,
+    DOCUMENT = 0x03,
+    ARRAY = 0x04,
+    BINARY = 0x05,
+    UNDEFINED = 0x06,
+    OBJECTID = 0x07,
+    BOOLEAN = 0x08,
+    UTC_DATE = 0x09,
+    NULL = 0x0A,
+    REGEX = 0x0B,
+    DB_POINTER = 0x0C,
+    CODE = 0x0D,
+    SYMBOL = 0x0E,
+    CODE_WITH_SCOPE = 0x0F,
+    INT32 = 0x10,
+    TIMESTAMP = 0x11,
+    INT64 = 0x12,
+    DECIMAL128 = 0x13,
+    MIN_KEY = 0xFF,
+    MAX_KEY = 0x7F,
+}
+
+export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')

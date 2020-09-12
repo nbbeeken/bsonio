@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "allowJs": false,
+        "target": "esNext",
+        "moduleResolution": "node",
+        "module": "commonjs",
+        "outDir": "lib",
+        "removeComments": true,
+        "sourceMap": true,
+        "useDefineForClassFields": true,
+        "strict": true,
+        "alwaysStrict": true,
+        "pretty": false
+    },
+    "include": ["src"]
+}
