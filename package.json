@@ -2,21 +2,17 @@
   "name": "bson-parser",
   "version": "1.0.0",
   "description": "",
-  "main": "parser.js",
+  "main": "lib/index.js",
+  "type": "module",
   "scripts": {
-    "test": "node --experimental-modules ./node_modules/.bin/mocha"
+    "pretest": "tsc",
+    "test": "node --enable-source-maps lib/test/run_tests.js",
+    "get-corpus": "sh ./etc/get_bson_corpus.sh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/bson": "^4.0.2",
-    "@types/chai": "^4.2.12",
-    "@types/mocha": "^8.0.3",
-    "bson": "^4.1.0",
-    "chai": "^4.2.0",
-    "mocha": "^8.1.3",
-    "ts-node": "^9.0.0",
     "typescript": "^4.0.2"
   }
 }

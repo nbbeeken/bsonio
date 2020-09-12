@@ -1,0 +1,7 @@
+{
+    "cSpell.words": [
+        "bytesify"
+    ],
+    "typescript.tsdk": "./node_modules/typescript",
+    "editor.formatOnSave": true
+}

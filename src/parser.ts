@@ -4,7 +4,7 @@ import { TYPE } from './constants'
  * Read BSON Bytes and produce a map with information about the BSON.
  * @param sequence - bson bytes
  */
-export function consume(sequence: Uint8Array, offset = 0) {
+export function parse(sequence: Uint8Array, offset = 0) {
     const bsonDocument = new Map()
 
     const view = new DataView(sequence.buffer, offset)
@@ -46,13 +46,13 @@ export function consume(sequence: Uint8Array, offset = 0) {
                 break
             }
             case TYPE.DOCUMENT: {
-                const { bsonDocument: v, documentSize: embedSize } = consume(sequence.subarray(index), index)
+                const { bsonDocument: v, documentSize: embedSize } = parse(sequence.subarray(index), index)
                 index += embedSize
                 value = v
                 break
             }
             case TYPE.ARRAY: {
-                const { bsonDocument: v, documentSize: embedSize } = consume(sequence.subarray(index), index)
+                const { bsonDocument: v, documentSize: embedSize } = parse(sequence.subarray(index), index)
                 index += embedSize
                 value = mapToArray(v)
                 break
@@ -125,7 +125,7 @@ export function consume(sequence: Uint8Array, offset = 0) {
 
 const utfDecoder = new TextDecoder('utf8', { fatal: true })
 function getCString(sequence: Uint8Array, index: number) {
-    let nullTerm = index;
+    let nullTerm = index
     for (; nullTerm < 256; nullTerm++) {
         if (sequence[nullTerm] === 0) break
     }

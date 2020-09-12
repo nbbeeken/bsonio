@@ -1,4 +1,6 @@
-import { TYPE, INT64_MAX } from './constants'
+import { TYPE } from './constants'
+
+export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
 
 interface BSONValueDescriptor {
     type: number,
@@ -91,32 +93,32 @@ function bsonDescriptorFrom(value: any): BSONValueDescriptor {
         } else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
             type = TYPE.BINARY
         } else if (Reflect.has(value, '_bsontype')) {
-                switch (Reflect.get(value, '_bsontype')) {
-                    case 'ObjectId':
-                    case 'ObjectID':
-                        type = TYPE.OBJECTID
-                        break
-                    case 'DBRef':
-                        type = TYPE.DB_POINTER
-                        break
-                    case 'Code':
-                        type = Reflect.has(value, 'scope') ? TYPE.CODE_WITH_SCOPE : TYPE.CODE
-                        break
-                    case 'Timestamp':
-                        type = TYPE.TIMESTAMP
-                        break
-                    case 'MinKey':
-                        type = TYPE.MIN_KEY
-                        break
-                    case 'MaxKey':
-                        type = TYPE.MAX_KEY
-                        break
-                }
-
+            switch (Reflect.get(value, '_bsontype')) {
+                case 'ObjectId':
+                case 'ObjectID':
+                    type = TYPE.OBJECTID
+                    break
+                case 'DBRef':
+                    type = TYPE.DB_POINTER
+                    break
+                case 'Code':
+                    type = Reflect.has(value, 'scope') ? TYPE.CODE_WITH_SCOPE : TYPE.CODE
+                    break
+                case 'Timestamp':
+                    type = TYPE.TIMESTAMP
+                    break
+                case 'MinKey':
+                    type = TYPE.MIN_KEY
+                    break
+                case 'MaxKey':
+                    type = TYPE.MAX_KEY
+                    break
             }
+
+        }
     }
 
-    if(type === TYPE.DOCUMENT) {
+    if (type === TYPE.DOCUMENT) {
         value = convertPOJOtoMap(value)
     }
 
@@ -126,7 +128,11 @@ function bsonDescriptorFrom(value: any): BSONValueDescriptor {
 
 const encoder = new TextEncoder()
 
-function produce(map: Map<string, {type: number, value: any, size: number}>) {
+function bytesify(map: Map<string, { type: number, value: any, size: number }> | any) {
+    if (!(map instanceof Map)) {
+        map = convertPOJOtoMap(map)
+    }
+
     const documentSize = calculateSize(map)
     const array = new Uint8Array(documentSize)
     const view = new DataView(array.buffer)
@@ -145,7 +151,7 @@ function produce(map: Map<string, {type: number, value: any, size: number}>) {
 }
 
 function utf8StringLength(str: string) {
-    return encoder.encode(str).byteLength;
+    return encoder.encode(str).byteLength
 }
 
 function calculateSize(map: Map<string, BSONValueDescriptor>) {
@@ -188,6 +194,6 @@ function writeBSONValue(array: Uint8Array, index: number, descriptor: BSONValueD
 
 export {
     convertPOJOtoMap,
-    produce,
+    bytesify,
     calculateSize,
 }

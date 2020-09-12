@@ -21,5 +21,3 @@ export const enum TYPE {
     MIN_KEY = 0xFF,
     MAX_KEY = 0x7F,
 }
-
-export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
