@@ -1,4 +1,4 @@
-export const enum TYPE {
+export enum TYPE {
     DOUBLE = 0x01,
     STRING = 0x02,
     DOCUMENT = 0x03,

@@ -7,8 +7,8 @@ export function parse(sequence: Uint8Array) {
     // for (const [key, value] of entries) {
     //     o[key] = value
     // }
-    const p = new Proxy(o, new BSONProxyHandler(parse_internal(sequence)))
-    return p
+    // const p = new Proxy(o, new BSONProxyHandler(parse_internal(sequence)))
+    return parse_internal(sequence)
 }
 
 class BSONProxyHandler implements ProxyHandler<any> {

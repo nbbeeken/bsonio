@@ -1,9 +1,9 @@
 import { parse } from './parser'
 import { bytesify } from './bytesify'
 
-const BSON = {
-    parse,
-    bytesify
-}
+export * as Types from './bson_types'
 
-export default BSON
+export {
+    parse,
+    bytesify,
+}

@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "bsontype",
         "bytesify"
     ],
     "typescript.tsdk": "./node_modules/typescript",

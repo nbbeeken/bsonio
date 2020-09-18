@@ -4,11 +4,13 @@
         "target": "ESNext",
         "module": "ESNext",
         "outDir": "lib",
+        "moduleResolution": "node",
         "removeComments": true,
         "sourceMap": true,
         "useDefineForClassFields": true,
         "strict": true,
         "alwaysStrict": true,
         "pretty": false,
+        "allowSyntheticDefaultImports": true
     }
 }

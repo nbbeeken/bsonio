@@ -1,25 +1,31 @@
-import { parse } from "../src/parser.js"
-import { expect, log, logObject } from "./utils.js"
+import test from 'tape'
+import { parse } from '..'
 
-export async function main() {
-    testEmptyDoc()
-    testSingleDoubleProp()
-}
 
-function testEmptyDoc() {
-    log('empty doc test')
+// function testSingleDoubleProp() {
+//     log('single prop `a` double doc test')
 
-    const emptyDoc = parse(new Uint8Array([5, 0, 0, 0, 0]))
-    expect(Object.keys(emptyDoc).length === 0)
-    expect(!('__proto__' in emptyDoc))
-    logObject('Empty Doc', emptyDoc)
-}
+//     const aMapsToDouble = parse(new Uint8Array([0x10, 0x00, 0x00, 0x00, 0x01, 0x61, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x02, 0x40, 0x00]))
+//     expect(Object.keys(aMapsToDouble).length === 1)
+//     expect(aMapsToDouble.bsonDocument.size === 1)
+//     expect(aMapsToDouble.bsonDocument.get('a') === 2.3)
+//     logObject('Prop `a` is double Doc', aMapsToDouble)
+// }
 
-function testSingleDoubleProp() {
-    log('single prop `a` double doc test')
+// describe('Parser reads binary BSON documents', function () {
+//     it('should read an empty document', function () {
+//         const emptyDoc = parse(new Uint8Array([5, 0, 0, 0, 0]))
+//         expect(emptyDoc.documentSize).to.equal(0)
+//         logObject('Empty Doc', emptyDoc)
+//     })
+// })
 
-    const aMapsToDouble = parse(new Uint8Array([0x10, 0x00, 0x00, 0x00, 0x01, 0x61, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x02, 0x40, 0x00]))
-    expect(Object.keys(aMapsToDouble).length === 1)
-    expect(aMapsToDouble.a === 2.3)
-    logObject('Prop `a` is double Doc', aMapsToDouble)
-}
+
+test('parser', function (t) {
+    //@ts-ignore
+    const { bsonDocument, documentSize } = parse(new Uint8Array([0x10, 0x00, 0x00, 0x00, 0x01, 0x61, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x02, 0x40, 0x00]))
+    t.equal(documentSize, 0x10)
+    t.equal(bsonDocument.size, 1, 'Should have 1 property')
+    t.equal(bsonDocument.get('a'), 2.3, 'Should have property `a` === 2.3 ')
+    t.end()
+})

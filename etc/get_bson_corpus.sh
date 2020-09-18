@@ -19,7 +19,7 @@ curl -sL https://github.com/mongodb/specifications/archive/master.zip -o "$tmpdi
 unzip -d "$tmpdir" "$tmpdir/specs.zip" > /dev/null
 
 mkdir -p "$spec_root"
-rsync -ah "$tmpdir/specifications-master/source/bson-corpus/tests/" "$spec_root" --delete
+cp $tmpdir/specifications-master/source/bson-corpus/tests/*.json $spec_root
 
 rm -rf $spec_root/bsonview
 rm -rf "$tmpdir"

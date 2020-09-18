@@ -1,3 +1,4 @@
 package-lock.json
 lib
 test/corpus
+node_modules
