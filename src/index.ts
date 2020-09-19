@@ -17,3 +17,13 @@ export {
 } from './bson_types'
 
 export { ObjectId } from './objectid'
+
+/**
+ * A library for parsing BSON.
+ *
+ * @remarks
+ * The {@link parse} and {@link bytesify} functions are intended to be
+ * mirrored apis of JSON.parse and JSON.stringify
+ *
+ * @packageDocumentation
+ */

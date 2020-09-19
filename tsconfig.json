@@ -16,5 +16,6 @@
         "declaration": true,
         "declarationDir": "typings",
         "declarationMap": true,
+        "types": []
     },
 }

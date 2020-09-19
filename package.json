@@ -5,7 +5,7 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "scripts": {
-        "build:dts": "tsc || true && api-extractor run",
+        "build:dts": "tsc || true && api-extractor run --local",
         "pretest": "npm run build:cjs && npm run build:test",
         "test": "node --enable-source-maps lib/bson.test.js",
         "get-corpus": "sh ./etc/get_bson_corpus.sh",
@@ -13,7 +13,8 @@
         "build:mjs": "esbuild src/index.ts --minify --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",
         "build:iife": "esbuild src/index.ts --bundle --target=es2015 --format=iife --global-name=BSON --platform=browser --sourcemap --strict --outfile=lib/index.bundle.js",
         "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/bson.test.js",
-        "build": "npm run build:cjs && npm run build:mjs && npm run build:iife && npm run build:test"
+        "build": "npm run build:cjs && npm run build:mjs && npm run build:iife && npm run build:test",
+        "build:docs": "npm run build:dts && typedoc --options config/typedoc.json && concat-md --decrease-title-levels --dir-name-as-title docs > docs.md && prettier docs.md --write"
     },
     "keywords": [],
     "author": "",
@@ -21,8 +22,13 @@
     "devDependencies": {
         "@microsoft/api-extractor": "^7.9.17",
         "@types/tape": "^4.13.0",
+        "concat-md": "^0.3.5",
         "esbuild": "^0.7.1",
+        "prettier": "^2.1.2",
+        "rimraf": "^3.0.2",
         "tape": "^5.0.1",
+        "typedoc": "^0.19.1",
+        "typedoc-plugin-markdown": "^3.0.0",
         "typescript": "^4.0.2"
     }
 }
