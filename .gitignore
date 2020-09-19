@@ -4,3 +4,4 @@ test/corpus
 node_modules
 typings
 docs
+*.tap

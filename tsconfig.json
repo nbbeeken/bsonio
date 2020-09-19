@@ -16,6 +16,7 @@
         "declaration": true,
         "declarationDir": "typings",
         "declarationMap": true,
+        "resolveJsonModule": true,
         "types": []
     },
 }

@@ -7,7 +7,7 @@
     "scripts": {
         "build:dts": "tsc || true && api-extractor run --local",
         "pretest": "npm run build:cjs && npm run build:test",
-        "test": "node --enable-source-maps lib/bson.test.js",
+        "test": "node --enable-source-maps lib/bson.test.js | tee test.tap",
         "get-corpus": "sh ./etc/get_bson_corpus.sh",
         "build:cjs": "esbuild src/index.ts --minify --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.cjs",
         "build:mjs": "esbuild src/index.ts --minify --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",

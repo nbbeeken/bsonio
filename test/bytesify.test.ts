@@ -11,8 +11,8 @@ import { bytesify } from '../src/index'
 
 test('bytesify', function (t) {
     const emptyDoc = bytesify({})
-    t.equal(emptyDoc.byteLength, 5)
+    t.equal(emptyDoc.byteLength, 5, 'has byteLength of 5')
     const view = (new DataView(emptyDoc.buffer))
-    t.equal(view.getInt32(0, true), 5)
+    t.equal(view.getInt32(0, true), 5, 'has 5 stored LE in the first 4 bytes')
     t.end()
 })
