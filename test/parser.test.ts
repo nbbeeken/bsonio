@@ -1,5 +1,5 @@
 import test from 'tape'
-import { parse } from '..'
+import { parse, parse_to_map } from '../src/index'
 
 
 // function testSingleDoubleProp() {
@@ -23,9 +23,9 @@ import { parse } from '..'
 
 test('parser', function (t) {
     //@ts-ignore
-    const { bsonDocument, documentSize } = parse(new Uint8Array([0x10, 0x00, 0x00, 0x00, 0x01, 0x61, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x02, 0x40, 0x00]))
-    t.equal(documentSize, 0x10)
+    const bsonDocument = parse_to_map(new Uint8Array([0x10, 0x00, 0x00, 0x00, 0x01, 0x61, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x02, 0x40, 0x00]))
+    t.equal(bsonDocument.documentByteLength, 0x10)
     t.equal(bsonDocument.size, 1, 'Should have 1 property')
-    t.equal(bsonDocument.get('a'), 2.3, 'Should have property `a` === 2.3 ')
+    t.equal(bsonDocument.get('a')?.value, 2.3, 'Should have property `a` === 2.3 ')
     t.end()
 })

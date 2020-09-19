@@ -17,7 +17,7 @@ export function BSONUndefined() {
         enumerable: false,
         configurable: false,
         writable: false,
-        value: 'BSONUndefined',
+        value: 'Undefined',
     })
     return box
 }
@@ -34,19 +34,19 @@ export function BSONNull() {
 }
 
 
-export function DBPointer({ namespace, oid }: { namespace: string, oid: ObjectId }) {
+export function BSONDbPointer({ namespace, oid }: { namespace: string, oid: ObjectId }) {
     const box = { value: { namespace, oid } }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
         configurable: false,
         writable: false,
-        value: 'DBPointer',
+        value: 'DbPointer',
     })
     return box
 }
 
 
-export function Code({ code }: { code: string }) {
+export function BSONCode({ code }: { code: string }) {
     const box = { value: { code } }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -64,13 +64,13 @@ export function BSONSymbol(value: string | symbol) {
         enumerable: false,
         configurable: false,
         writable: false,
-        value: 'BSONSymbol',
+        value: 'Symbol',
     })
     return box
 }
 
 
-export function CodeWithScope({ code, scope }: { code: string | Function, scope: Record<string, any> }) {
+export function BSONCodeWithScope({ code, scope }: { code: string | Function, scope: Record<string, any> }) {
     const box = { value: { code: code.toString(), scope } }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -82,7 +82,7 @@ export function CodeWithScope({ code, scope }: { code: string | Function, scope:
 }
 
 
-export function Int32(value: number) {
+export function BSONInt32(value: number) {
     const box = { value }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -94,7 +94,7 @@ export function Int32(value: number) {
 }
 
 
-export function Timestamp(value: bigint) {
+export function BSONTimestamp(value: bigint) {
     const box = { value }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -106,7 +106,7 @@ export function Timestamp(value: bigint) {
 }
 
 
-export function Int64(value: bigint) {
+export function BSONInt64(value: bigint) {
     const box = { value }
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -117,7 +117,7 @@ export function Int64(value: bigint) {
     return box
 }
 
-export function MinKey() {
+export function BSONMinKey() {
     const box = {}
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,
@@ -129,7 +129,7 @@ export function MinKey() {
 }
 
 
-export function MaxKey() {
+export function BSONMaxKey() {
     const box = {}
     Object.defineProperty(box, '_bsontype', {
         enumerable: false,

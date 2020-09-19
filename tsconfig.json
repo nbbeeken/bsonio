@@ -4,6 +4,7 @@
         "target": "ESNext",
         "module": "ESNext",
         "outDir": "lib",
+        "emitDeclarationOnly": true,
         "moduleResolution": "node",
         "removeComments": true,
         "sourceMap": true,
@@ -11,6 +12,9 @@
         "strict": true,
         "alwaysStrict": true,
         "pretty": false,
-        "allowSyntheticDefaultImports": true
-    }
+        "allowSyntheticDefaultImports": true,
+        "declaration": true,
+        "declarationDir": "typings",
+        "declarationMap": true,
+    },
 }

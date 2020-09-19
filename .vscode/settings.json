@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "bsonio",
         "bsontype",
-        "bytesify"
+        "bytesify",
+        "esbuild",
+        "iife",
+        "tsdoc"
     ],
     "typescript.tsdk": "./node_modules/typescript",
     "editor.formatOnSave": true

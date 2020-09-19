@@ -1,50 +1,20 @@
+import { bsonDescriptorFrom, BSONValueDescriptor } from './bytesify'
 import { TYPE } from './constants'
 
 export function parse(sequence: Uint8Array) {
-    const o = Object.create(null)
-    delete o.__proto__
-    // const entries = parse_internal(sequence).bsonDocument.entries()
-    // for (const [key, value] of entries) {
-    //     o[key] = value
-    // }
-    // const p = new Proxy(o, new BSONProxyHandler(parse_internal(sequence)))
-    return parse_internal(sequence)
+    return Object.fromEntries([...parse_to_map(sequence).entries()].map(([key, { value }]) => ([key, value])))
 }
 
-class BSONProxyHandler implements ProxyHandler<any> {
-    #bsonDocument: Map<PropertyKey, any>
-    #documentSize: number
-    constructor(documentInfo: ReturnType<typeof parse_internal>) {
-        this.#bsonDocument = documentInfo.bsonDocument
-        this.#documentSize = documentInfo.documentSize
-    }
-
-    has(target: this, p: PropertyKey) { return this.#bsonDocument.has(p) }
-
-    get(target: this, p: PropertyKey, receiver: any) { return this.#bsonDocument.get(p) }
-
-    set(target: this, p: PropertyKey, value: any, receiver: any) { return !!this.#bsonDocument.set(p, value) }
-
-    ownKeys(target: any) { return [...this.#bsonDocument.keys()] }
-
-    getOwnPropertyDescriptor(target: any, p: PropertyKey): PropertyDescriptor {
-        if (!this.#bsonDocument.has(p)) {
-            return { configurable: false, enumerable: false, writable: false, value: undefined }
-        }
-        return {
-            enumerable: true,
-            configurable: true,
-        }
-    }
-    enumerate(target: any) { return [...this.#bsonDocument.keys()] }
+export class BSONDocument extends Map<string, BSONValueDescriptor> {
+    documentByteLength!: number;
 }
 
 /**
  * Read BSON Bytes and produce a map with information about the BSON.
  * @param sequence - bson bytes
  */
-function parse_internal(sequence: Uint8Array, offset = 0) {
-    const bsonDocument = new Map()
+export function parse_to_map(sequence: Uint8Array, offset = 0) {
+    const bsonDocument = new BSONDocument()
 
     const view = new DataView(sequence.buffer, offset)
     let index = 0
@@ -85,15 +55,15 @@ function parse_internal(sequence: Uint8Array, offset = 0) {
                 break
             }
             case TYPE.DOCUMENT: {
-                const { bsonDocument: v, documentSize: embedSize } = parse_internal(sequence.subarray(index), index)
-                index += embedSize
-                value = v
+                const embeddedDoc = parse_to_map(sequence.subarray(index), index)
+                index += embeddedDoc.documentByteLength
+                value = embeddedDoc
                 break
             }
             case TYPE.ARRAY: {
-                const { bsonDocument: v, documentSize: embedSize } = parse_internal(sequence.subarray(index), index)
-                index += embedSize
-                value = mapToArray(v)
+                const embeddedDoc = parse_to_map(sequence.subarray(index), index)
+                index += embeddedDoc.documentByteLength
+                value = mapToArray(embeddedDoc)
                 break
             }
             case TYPE.BINARY: {
@@ -157,9 +127,10 @@ function parse_internal(sequence: Uint8Array, offset = 0) {
             default:
                 throw new Error(`Unsupported type 0x${type.toString(16)}`)
         }
-        bsonDocument.set(key, value)
+        bsonDocument.set(key, bsonDescriptorFrom(value))
     }
-    return { bsonDocument, documentSize }
+    bsonDocument.documentByteLength = documentSize;
+    return bsonDocument
 }
 
 const utfDecoder = new TextDecoder('utf8', { fatal: true })

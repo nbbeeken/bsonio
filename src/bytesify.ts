@@ -1,8 +1,9 @@
 import { TYPE } from './constants'
+import { BSONDocument } from './parser'
 
 export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
 
-interface BSONValueDescriptor {
+export interface BSONValueDescriptor {
     type: number,
     value: any,
     size: number,
@@ -23,7 +24,7 @@ function convertPOJOtoMap(document: Record<string, any>) {
 }
 
 /** Create a value descriptor that explains the BSON value. */
-function bsonDescriptorFrom(value: any): BSONValueDescriptor {
+export function bsonDescriptorFrom(value: any): BSONValueDescriptor {
     let type
     let size = NaN
     let bytes
@@ -92,6 +93,12 @@ function bsonDescriptorFrom(value: any): BSONValueDescriptor {
             type = TYPE.UTC_DATE
         } else if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) {
             type = TYPE.BINARY
+        } else if (value instanceof BSONDocument) {
+            type = TYPE.DOCUMENT
+            size = value.documentByteLength
+        } else if (Array.isArray(value)) {
+            type = TYPE.ARRAY
+            // size = value.documentByteLength
         } else if (Reflect.has(value, '_bsontype')) {
             switch (Reflect.get(value, '_bsontype')) {
                 case 'ObjectId':

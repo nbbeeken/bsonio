@@ -1,9 +1,19 @@
-import { parse } from './parser'
-import { bytesify } from './bytesify'
-
-export * as Types from './bson_types'
+export { parse, parse_to_map, BSONDocument } from './parser'
+export { bytesify, BSONValueDescriptor } from './bytesify'
 
 export {
-    parse,
-    bytesify,
-}
+    BSONCode,
+    BSONCodeWithScope,
+    BSONDbPointer,
+    BSONDouble,
+    BSONInt32,
+    BSONInt64,
+    BSONMaxKey,
+    BSONMinKey,
+    BSONNull,
+    BSONSymbol,
+    BSONTimestamp,
+    BSONUndefined,
+} from './bson_types'
+
+export { ObjectId } from './objectid'
