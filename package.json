@@ -7,13 +7,14 @@
     "scripts": {
         "build:dts": "tsc || true && api-extractor run --local",
         "pretest": "npm run build:cjs && npm run build:test",
-        "test": "node --enable-source-maps lib/bson.test.js | tee test.tap",
+        "test": "node --enable-source-maps lib/test.js | tee test.tap",
         "get-corpus": "sh ./etc/get_bson_corpus.sh",
-        "build:cjs": "esbuild src/index.ts --minify --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.cjs",
-        "build:mjs": "esbuild src/index.ts --minify --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",
+        "build:cjs": "esbuild src/index.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.cjs",
+        "build:mjs": "esbuild src/index.ts --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",
         "build:iife": "esbuild src/index.ts --bundle --target=es2015 --format=iife --global-name=BSON --platform=browser --sourcemap --strict --outfile=lib/index.bundle.js",
-        "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/bson.test.js",
+        "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/test.js",
         "build": "npm run build:cjs && npm run build:mjs && npm run build:iife && npm run build:test",
+        "fmt": "prettier {src,test}/*.ts --write",
         "build:docs": "npm run build:dts && typedoc --options config/typedoc.json && concat-md --decrease-title-levels --dir-name-as-title docs > docs.md && prettier docs.md --write"
     },
     "keywords": [],

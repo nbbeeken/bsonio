@@ -8,16 +8,16 @@
             "type": "pwa-node",
             "request": "launch",
             "name": "Debug Tests",
-            "runtimeArgs": [
-                "--enable-source-maps"
-            ],
+            "sourceMaps": true,
+            "stopOnEntry": true,
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/lib/bson.test.js",
+            "program": "${workspaceFolder}/lib/test.js",
             "outFiles": [
-                "${workspaceFolder}/**/*.js"
-            ]
+                "${workspaceFolder}/lib/*"
+            ],
+            "preLaunchTask": "npm: pretest"
         }
     ]
 }
