@@ -30,3 +30,29 @@ test('bytesify `{s: "hello"}`', function (t) {
 	t.equal('hello', utfDecoder.decode(doc.slice(11, 16)), 'has string "hello" stored at index [11, 16)')
 	t.end()
 })
+
+test('bytesify: `{ a: 2.3 }` document', function (t) {
+	const bytesShouldBe = new Uint8Array([
+		0x10,
+		0x00,
+		0x00,
+		0x00,
+		0x01,
+		0x61,
+		0x00,
+		0x66,
+		0x66,
+		0x66,
+		0x66,
+		0x66,
+		0x66,
+		0x02,
+		0x40,
+		0x00,
+	])
+	const aMapsToDouble = bytesify({ a: 2.3 })
+	const view = new DataView(aMapsToDouble.buffer)
+	t.equal(view.getFloat64(7, true), 2.3, 'have float64 equalling 2.3 at index 7')
+	t.deepEqual(aMapsToDouble, bytesShouldBe, 'have the same bytes as expected format')
+	t.end()
+})

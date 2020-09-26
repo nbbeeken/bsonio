@@ -1,4 +1,4 @@
-export { parse, parse_to_map, BSONDocument } from './parser'
+export { parse, parseToMap, BSONDocument } from './parser'
 export { bytesify, BSONValue } from './bytesify'
 
 export {
