@@ -135,7 +135,7 @@ export function parseToMap(sequence: Uint8Array, offset = 0) {
 			default:
 				throw new Error(`Unsupported type 0x${type.toString(16)} - ${TYPE[type]}`)
 		}
-		bsonDocument.set(key, BSONValue.from(value))
+		bsonDocument.set(key, BSONValue.from(value, { typeOverride: type }))
 	}
 	bsonDocument.documentByteLength = documentSize
 	return bsonDocument

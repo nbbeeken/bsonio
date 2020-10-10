@@ -1,5 +1,5 @@
 export { parse, parseToMap, BSONDocument } from './parser'
-export { bytesify, BSONValue } from './bytesify'
+export { bytesify, bytesFromMap, BSONValue } from './bytesify'
 
 export {
 	BSONCode,

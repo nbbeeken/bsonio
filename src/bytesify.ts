@@ -65,14 +65,18 @@ export class BSONValue {
 				return new Uint8Array([...new Uint8Array(new Int32Array([stringBytes.byteLength]).buffer), ...stringBytes])
 
 			default:
-				throw new Error('TODO: Add type size calculations')
+				throw new Error(`TODO: Add type size calculations ${this.type}`)
 		}
 	}
 
-	static from(value: any, readBytes?: Uint8Array) {
+	static from(value: any, { readBytes, typeOverride }: { readBytes?: Uint8Array; typeOverride?: TYPE } = {}) {
 		let type
 		let size = -1
 		let bytes = null
+
+		if (typeOverride !== undefined) {
+			return new BSONValue(typeOverride, value)
+		}
 
 		switch (typeof value) {
 			case 'number':
@@ -173,7 +177,7 @@ export function bytesify(pojo?: Record<string, any> | null) {
 	return bytesFromMap(convertPOJOtoMap(pojo))
 }
 
-function bytesFromMap(map: Map<string, BSONValue>) {
+export function bytesFromMap(map: Map<string, BSONValue>) {
 	const documentSize = calculateDocumentSize(map)
 	const array = new Uint8Array(documentSize)
 	const view = new DataView(array.buffer)

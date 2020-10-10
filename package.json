@@ -9,7 +9,7 @@
         "pretest": "sh etc/get_bson_corpus.sh && npm run build:cjs && npm run build:test",
         "test": "node --enable-source-maps lib/test.js | tee test.tap",
         "get-corpus": "sh ./etc/get_bson_corpus.sh",
-        "build:cjs": "esbuild src/index.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.cjs",
+        "build:cjs": "esbuild src/index.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.js",
         "build:mjs": "esbuild src/index.ts --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",
         "build:iife": "esbuild src/index.ts --bundle --target=es2015 --format=iife --global-name=BSON --platform=browser --sourcemap --strict --outfile=lib/index.bundle.js",
         "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/test.js",
