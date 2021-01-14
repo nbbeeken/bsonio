@@ -1,5 +1,5 @@
-import { TYPE } from './constants'
-import { ObjectId } from './objectid'
+import { TYPE } from './constants.js'
+import { ObjectId } from './objectid.js'
 
 export const BSON_TYPE_MAP = new Map([
 	['Double', { fn: BSONDouble, type: TYPE.DOUBLE }],

@@ -1,6 +1,6 @@
-import { BSON_TYPE_MAP } from './bson_types'
-import { TYPE } from './constants'
-import { BSONDocument } from './parser'
+import { BSON_TYPE_MAP } from './bson_types.js'
+import { TYPE } from './constants.js'
+import { BSONDocument } from './parser.js'
 
 export const INT64_MAX = BigInt('0x7FFFFFFFFFFFFFFF')
 
@@ -159,14 +159,15 @@ export class BSONValue {
  * @param document - a simple js object
  */
 function convertPOJOtoMap(document: Record<string, any>) {
-	const map = new Map()
+	const map = new BSONDocument(new Uint8Array())
+	map.isStale = true // TODO: always run through the parser
 	for (const [key, value] of Object.entries(document)) {
 		map.set(key, BSONValue.from(value))
 	}
 	return map
 }
 
-export class BSONError extends Error {}
+export class BSONError extends Error { }
 
 const encoder = new TextEncoder()
 
@@ -177,7 +178,10 @@ export function bytesify(pojo?: Record<string, any> | null) {
 	return bytesFromMap(convertPOJOtoMap(pojo))
 }
 
-export function bytesFromMap(map: Map<string, BSONValue>) {
+export function bytesFromMap(map: BSONDocument) {
+	if (map.bytesSequence && !map.isStale) {
+		return map.bytesSequence
+	}
 	const documentSize = calculateDocumentSize(map)
 	const array = new Uint8Array(documentSize)
 	const view = new DataView(array.buffer)

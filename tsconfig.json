@@ -4,7 +4,7 @@
         "target": "ESNext",
         "module": "ESNext",
         "outDir": "lib",
-        "emitDeclarationOnly": true,
+        "emitDeclarationOnly": false,
         "moduleResolution": "node",
         "removeComments": true,
         "sourceMap": true,
@@ -19,4 +19,7 @@
         "resolveJsonModule": true,
         "types": []
     },
+    "include": [
+        "src"
+    ]
 }

@@ -1,5 +1,5 @@
-export { parse, parseToMap, BSONDocument } from './parser'
-export { bytesify, bytesFromMap, BSONValue } from './bytesify'
+export { parse, parseToMap, BSONDocument, accessRaw } from './parser.js'
+export { bytesify, bytesFromMap, BSONValue } from './bytesify.js'
 
 export {
 	BSONCode,
@@ -14,9 +14,9 @@ export {
 	BSONSymbol,
 	BSONTimestamp,
 	BSONUndefined,
-} from './bson_types'
+} from './bson_types.js'
 
-export { ObjectId } from './objectid'
+export { ObjectId } from './objectid.js'
 
 /**
  * A library for parsing BSON.

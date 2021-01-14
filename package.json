@@ -4,16 +4,17 @@
     "description": "",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
+    "module": "lib/test/run_tests.js",
     "scripts": {
         "build:dts": "tsc || true && api-extractor run --local",
         "pretest": "sh etc/get_bson_corpus.sh && npm run build:cjs && npm run build:test",
         "test": "node --enable-source-maps lib/test.js",
         "test:log": "node --enable-source-maps lib/test.js | tee test.tap",
         "get-corpus": "sh ./etc/get_bson_corpus.sh",
-        "build:cjs": "esbuild src/index.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/index.js",
-        "build:mjs": "esbuild src/index.ts --bundle --target=es2015 --format=esm --platform=node --sourcemap --strict --outfile=lib/index.mjs",
-        "build:iife": "esbuild src/index.ts --bundle --target=es2015 --format=iife --global-name=BSON --platform=browser --sourcemap --strict --outfile=lib/index.bundle.js",
-        "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --strict --outfile=lib/test.js",
+        "build:cjs": "esbuild src/index.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --outfile=lib/index.js",
+        "build:mjs": "esbuild src/index.ts --bundle --target=es2015 --format=esm --platform=node --sourcemap --outfile=lib/index.mjs",
+        "build:iife": "esbuild src/index.ts --bundle --target=es2015 --format=iife --global-name=BSON --external:crypto --platform=browser --sourcemap --strict --outfile=lib/index.bundle.js",
+        "build:test": "esbuild test/run_tests.ts --bundle --target=es2015 --format=cjs --platform=node --sourcemap --outfile=lib/test.js",
         "build": "npm run build:cjs && npm run build:mjs && npm run build:iife && npm run build:test",
         "fmt": "prettier {src,test}/*.ts --write",
         "build:docs": "npm run build:dts && typedoc --options config/typedoc.json && concat-md --decrease-title-levels --dir-name-as-title docs > docs.md && prettier docs.md --write"
@@ -22,15 +23,15 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "@microsoft/api-extractor": "^7.9.17",
+        "@microsoft/api-extractor": "^7.13.0",
         "@types/tape": "^4.13.0",
         "concat-md": "^0.3.5",
-        "esbuild": "^0.7.1",
-        "prettier": "^2.1.2",
+        "esbuild": "^0.8.32",
+        "prettier": "^2.2.1",
         "rimraf": "^3.0.2",
-        "tape": "^5.0.1",
-        "typedoc": "^0.19.1",
-        "typedoc-plugin-markdown": "^3.0.0",
-        "typescript": "^4.0.2"
+        "tape": "^5.1.1",
+        "typedoc": "^0.20.14",
+        "typedoc-plugin-markdown": "^3.4.0",
+        "typescript": "^4.1.3"
     }
 }

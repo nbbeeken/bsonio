@@ -1,12 +1,30 @@
-import { BSONValue } from './bytesify'
-import { TYPE } from './constants'
+import { BSONValue } from './bytesify.js'
+import { TYPE } from './constants.js'
+
+export const accessRaw = Symbol('raw')
 
 export function parse(sequence: Uint8Array) {
-	return Object.fromEntries([...parseToMap(sequence).entries()].map(([key, { value }]) => [key, value]))
+	const object = Object.create(null);
+	const map = parseToMap(sequence);
+	for (const [key, { value }] of map) {
+		Reflect.defineProperty(object, key, { enumerable: true, writable: true, configurable: true, value })
+	}
+	Reflect.defineProperty(object, accessRaw, { enumerable: false, configurable: false, value: map })
+	return object
 }
 
 export class BSONDocument extends Map<string, BSONValue> {
-	documentByteLength!: number
+	isStale
+	bytesSequence
+	constructor(sequence: Uint8Array) {
+		super()
+		this.bytesSequence = sequence
+		this.isStale = false
+	}
+
+	get documentByteLength() {
+		return this.bytesSequence.byteLength
+	}
 }
 
 /**
@@ -14,7 +32,7 @@ export class BSONDocument extends Map<string, BSONValue> {
  * @param sequence - bson bytes
  */
 export function parseToMap(sequence: Uint8Array, offset = 0) {
-	const bsonDocument = new BSONDocument()
+	const bsonDocument = new BSONDocument(sequence)
 
 	const view = new DataView(sequence.buffer, offset)
 	let index = 0
