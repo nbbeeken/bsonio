@@ -4,8 +4,8 @@ import { TYPE } from './constants.js'
 export const accessRaw = Symbol('raw')
 
 export function parse(sequence: Uint8Array) {
-	const object = Object.create(null);
-	const map = parseToMap(sequence);
+	const object = Object.create(null)
+	const map = parseToMap(sequence)
 	for (const [key, { value }] of map) {
 		Reflect.defineProperty(object, key, { enumerable: true, writable: true, configurable: true, value })
 	}

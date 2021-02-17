@@ -1,11 +1,10 @@
 function random(size: number): Uint8Array {
-	const result = new Uint8Array(size);
+	const result = new Uint8Array(size)
 	for (let i = 0; i < size; ++i) {
-		result[i] = Math.floor(Math.random() * 256);
+		result[i] = Math.floor(Math.random() * 256)
 	}
-	return result;
+	return result
 }
-
 
 export class ObjectId {
 	_id: Uint8Array
@@ -20,6 +19,9 @@ export class ObjectId {
 	}
 
 	toString() {
-		return `ObjectId('${[...this._id].map(v => v.toString(16)).join('').toUpperCase()}')`;
+		return `ObjectId('${[...this._id]
+			.map((v) => v.toString(16))
+			.join('')
+			.toUpperCase()}')`
 	}
 }

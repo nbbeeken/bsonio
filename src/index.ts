@@ -1,5 +1,6 @@
 export { parse, parseToMap, BSONDocument, accessRaw } from './parser.js'
 export { bytesify, bytesFromMap, BSONValue } from './bytesify.js'
+export { makeProxyFromDocument } from './proxy'
 
 export {
 	BSONCode,
