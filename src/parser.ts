@@ -96,7 +96,7 @@ export function parseToMap(sequence: Uint8Array, offset = 0) {
 				break
 			}
 			case TYPE.BOOLEAN:
-				value = !!view.getUint8(index)
+				value = Boolean(view.getUint8(index))
 				index + 1
 				break
 			case TYPE.INT64:
@@ -155,7 +155,7 @@ export function parseToMap(sequence: Uint8Array, offset = 0) {
 		}
 		bsonDocument.set(key, BSONValue.from(value, { typeOverride: type }))
 	}
-	bsonDocument.documentByteLength = documentSize
+	(bsonDocument as any).documentByteLength = documentSize
 	return bsonDocument
 }
 
