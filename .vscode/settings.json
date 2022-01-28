@@ -1,18 +1,19 @@
 {
-        "cSpell.words": [
-                "bson",
-                "bsonio",
-                "bsontype",
-                "bytesify",
-                "esbuild",
-                "extjson",
-                "iife",
-                "outfile",
-                "sourcemap",
-                "pojo",
-                "tsdoc",
-                "typedoc"
-        ],
-        "typescript.tsdk": "./node_modules/typescript",
-        "editor.formatOnSave": true
+	"cSpell.words": [
+		"bson",
+		"bsonio",
+		"bsontype",
+		"bytesify",
+		"esbuild",
+		"extjson",
+		"iife",
+		"outfile",
+		"sourcemap",
+		"pojo",
+		"tsdoc",
+		"typedoc"
+	],
+	"typescript.tsdk": "./node_modules/typescript",
+	"editor.formatOnSave": true,
+	"search.useIgnoreFiles": false
 }

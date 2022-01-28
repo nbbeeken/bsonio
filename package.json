@@ -12,6 +12,7 @@
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
+		"bson": "^4.6.1",
 		"jsvu": "^1.13.3",
 		"prettier": "^2.5.1"
 	}

@@ -200,6 +200,6 @@ const doc = BSONDocument.from(bufferFromHexArray([
 ]))
 
 // console.log(doc)
-const rec = doc.toRecord()
-console.log('hi')
-console.log(inspect(rec))
+// const rec = doc.toRecord()
+// console.log(inspect(rec))
+console.log(doc.toMap())
