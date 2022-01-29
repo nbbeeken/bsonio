@@ -15,52 +15,16 @@ export const getGlobal = () => {
 	)
 }
 
-
 /**
- * @param {Uint8Array} bytes
- * @returns  {string}
- */
-const bytesToHex = (bytes) => Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
-
-const raw = /[\w*+\-./@]/
-/**
- * @param {number} code
- * @param {number} length
+ * @param {number} byte
  * @returns {string}
  */
-const hex = function (code, length) {
-	var result = code.toString(16)
-	while (result.length < length) result = '0' + result
-	return result
-}
-/**
- * @param {string} string
- * @returns
- */
-const escapeUriStyle = (string) => {
-	let result = ''
-	let index = 0
-	while (index < string.length) {
-		let chr = string.charAt(index++)
-		if (raw.exec(chr)) {
-			result += chr
-		} else {
-			let code = chr.charCodeAt(0)
-			if (code < 256) {
-				result += '%' + hex(code, 2)
-			} else {
-				result += '%u' + hex(code, 4).toUpperCase()
-			}
-		}
-	}
-	return result
-}
-
+const byteToHex = (byte) => byte.toString(16).padStart(2, '0')
 /**
  * @param {Uint8Array} bytes
  * @returns {string}
  */
-const decode_utf8 = (bytes) => decodeURIComponent(escapeUriStyle(Array.from(bytes).map(b => String.fromCharCode(b)).join('')))
+const bytesToHex = (bytes) => Array.from(bytes).map(b => byteToHex(b)).join('')
 
 const $size = Symbol('size')
 const $dv = Symbol('dataView')
@@ -68,6 +32,15 @@ const $bytes = Symbol('bytes')
 const $isArray = Symbol('isArray')
 export const MinKey = Symbol('MinKey')
 export const MaxKey = Symbol('MaxKey')
+
+const SIZEOF = Object.freeze({
+	INT32: 4,
+	INT64: 8,
+	FLOAT64: 8,
+	BYTE: 1,
+	OID: 12,
+	D128: 16,
+})
 
 const MAX_DATE = 8640000000000000n
 const MIN_DATE = -8640000000000000n
@@ -97,6 +70,7 @@ export const BT = Object.freeze({
 	MAX_KEY: 0x7F,
 })
 
+const VALID_BSON_TYPE_BYTES = new Set(Object.values(BT))
 const BT_LOOKUP = Object.freeze(Object.fromEntries(Object.entries(BT).map(([typeName, typeByte]) => [typeByte, typeName])))
 
 export class BSONDataView extends DataView {
@@ -107,9 +81,25 @@ export class BSONDataView extends DataView {
 	 */
 	constructor(buffer, byteOffset, byteLength) {
 		super(buffer, byteOffset, byteLength)
-		this._uint8 = new Uint8Array(buffer, byteOffset, byteLength)
-		if (getGlobal().TextDecoder) this.decoder = new TextDecoder('utf-8', { fatal: true })
-		else this.decoder = { decode: decode_utf8 }
+		this[$bytes] = new Uint8Array(buffer, byteOffset, byteLength)
+		if (getGlobal().TextDecoder) {
+			this.decoder = new TextDecoder('utf-8', { fatal: true })
+		} else {
+			// Still support ascii!
+			this.decoder = {
+				decode() {
+					throw new Error('Environment cannot decode utf8')
+				}
+			}
+		}
+	}
+	/**
+	 * @param {number} [begin]
+	 * @param {number} [end]
+	 * @returns {Uint8Array}
+	 */
+	subarray(begin, end) {
+		return this[$bytes].subarray(begin, end);
 	}
 	/** @returns {number} */
 	getSize(offset = 0) {
@@ -119,7 +109,7 @@ export class BSONDataView extends DataView {
 	}
 	/** @returns {number} */
 	getCStringLength(offset = 0) {
-		const nullTerminatorIndex = this._uint8.subarray(offset).findIndex(byte => byte === 0) + offset
+		const nullTerminatorIndex = this[$bytes].subarray(offset).findIndex(byte => byte === 0) + offset
 		return nullTerminatorIndex - offset
 	}
 	/**
@@ -127,7 +117,7 @@ export class BSONDataView extends DataView {
 	 * @returns {Uint8Array}
 	 */
 	getCStringSequence(offset = 0) {
-		return this._uint8.subarray(offset, offset + this.getCStringLength(offset))
+		return this[$bytes].subarray(offset, offset + this.getCStringLength(offset))
 	}
 	/**
 	 * @param {number} [offset]
@@ -161,12 +151,12 @@ export class BSONDataView extends DataView {
 	 */
 	getString(offset = 0) {
 		const size = this.getSize(offset)
-		const seq = this._uint8.subarray(offset + 4, offset + 4 + size)
+		const seq = this[$bytes].subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size)
 		if (seq[seq.byteLength - 1] !== 0x00) {
 			throw new Error(`utf8 string must end in 0x00, size=${size}`)
 		}
 
-		const seqOfChar = this._uint8.subarray(offset + 4, offset + 4 + size - 1)
+		const seqOfChar = this[$bytes].subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size - SIZEOF.BYTE)
 		const isASCII = seqOfChar.find(byte => byte > 0x7F) == null
 		if (isASCII) {
 			const chars = Array.from(seqOfChar).map(v => String.fromCharCode(v))
@@ -182,7 +172,7 @@ export class BSONDataView extends DataView {
 	 */
 	getSizedSequence(offset = 0) {
 		const size = this.getInt32(offset, true)
-		const seq = this._uint8.subarray(offset, offset + 4 + size)
+		const seq = this[$bytes].subarray(offset, offset + 4 + size)
 		return seq
 	}
 }
@@ -255,13 +245,13 @@ export class BSONValue {
 			case BT.DB_POINTER: {
 				const namespaceLength = dv.getSize(0)
 				const ns = dv.getString(0)
-				const pointer = { $oid: dv._uint8.subarray(namespaceLength, 12 + namespaceLength) } // ObjectId
+				const pointer = { $oid: dv.subarray(namespaceLength, SIZEOF.OID + namespaceLength) } // ObjectId
 				return { ns, pointer }
 			}
 
 			case BT.JS_CODE_SCOPE: {
 				const code = dv.getString(4)
-				const scope = BSONDocument.from(this.bytes.subarray(4 + 4 + dv.getSize(4)))
+				const scope = BSONDocument.from(this.bytes.subarray(SIZEOF.INT32 + SIZEOF.INT32 + dv.getSize(4)))
 				return { code, scope }
 			}
 
@@ -282,46 +272,52 @@ function bsonValueBytes(type, readerIndex, dv) {
 		case BT.UNDEFINED: return new Uint8Array()
 		case BT.MIN_KEY: return new Uint8Array()
 		case BT.MAX_KEY: return new Uint8Array()
-		case BT.DOUBLE: return dv._uint8.subarray(readerIndex, readerIndex + 8)
-		case BT.INT32: return dv._uint8.subarray(readerIndex, readerIndex + 4)
-		case BT.INT64: return dv._uint8.subarray(readerIndex, readerIndex + 8)
-		case BT.DATE: return dv._uint8.subarray(readerIndex, readerIndex + 8)
-		case BT.TIMESTAMP: return dv._uint8.subarray(readerIndex, readerIndex + 8)
-		case BT.BOOLEAN: return dv._uint8.subarray(readerIndex, readerIndex + 1)
+		case BT.INT32: return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32)
+
+		case BT.DOUBLE:
+			return dv.subarray(readerIndex, readerIndex + SIZEOF.FLOAT64)
+		case BT.INT64:
+		case BT.DATE:
+		case BT.TIMESTAMP:
+			return dv.subarray(readerIndex, readerIndex + SIZEOF.INT64)
+
+		case BT.BOOLEAN: return dv.subarray(readerIndex, readerIndex + SIZEOF.BYTE)
 		case BT.STRING: return dv.getSizedSequence(readerIndex)
 		case BT.SYMBOL: return dv.getSizedSequence(readerIndex)
 		case BT.JS_CODE: return dv.getSizedSequence(readerIndex)
 		case BT.BINARY: {
 			const size = dv.getSize(readerIndex)
-			// 5 accounts for subtype byte
-			return dv._uint8.subarray(readerIndex, readerIndex + 5 + size)
+			return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32 + SIZEOF.BYTE + size)
 		}
-		case BT.DEC128: return dv._uint8.subarray(readerIndex, readerIndex + 16)
-		case BT.OID: return dv._uint8.subarray(readerIndex, readerIndex + 12)
-		case BT.DB_POINTER: return dv._uint8.subarray(readerIndex, readerIndex + 4 + 12 + dv.getInt32(readerIndex, true))
+		case BT.DEC128: return dv.subarray(readerIndex, readerIndex + SIZEOF.D128)
+		case BT.OID: return dv.subarray(readerIndex, readerIndex + SIZEOF.OID)
+
+		case BT.DB_POINTER:
+			return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32 + SIZEOF.OID + dv.getInt32(readerIndex, true))
 
 		case BT.ARRAY:
-		case BT.DOCUMENT: return dv._uint8.subarray(readerIndex, readerIndex + dv.getInt32(readerIndex, true) + 1)
+		case BT.DOCUMENT:
+			return dv.subarray(readerIndex, readerIndex + dv.getInt32(readerIndex, true) + SIZEOF.BYTE)
 
 		case BT.REGEXP: {
 			const patternSize = dv.getCStringLength(readerIndex)
 			const flagsSize = dv.getCStringLength(readerIndex + 1 + patternSize)
-			return dv._uint8.subarray(readerIndex, readerIndex + patternSize + flagsSize + 2)
+			return dv.subarray(readerIndex, readerIndex + patternSize + flagsSize + SIZEOF.BYTE + SIZEOF.BYTE)
 		}
 
 		case BT.JS_CODE_SCOPE: {
 			const codeSize = dv.getSize(readerIndex)
-			return dv._uint8.subarray(readerIndex, readerIndex + codeSize)
+			return dv.subarray(readerIndex, readerIndex + codeSize)
 		}
 
 		default:
-			throw new Error(`No Parser for 0x${type.toString(16)} off: ${readerIndex}`)
+			throw new Error(`No Parser for 0x${byteToHex(type)} off: ${readerIndex}`)
 	}
 }
 
 /**
  * @param {Uint8Array} bytes
- * @returns {Generator<[key: string, value: BSONValue]>}
+ * @returns {Generator<readonly [key: string, value: BSONValue]>}
  */
 export function* iterateBson(bytes) {
 	let dv = new BSONDataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
@@ -332,14 +328,18 @@ export function* iterateBson(bytes) {
 
 	while (readerIndex < size) {
 		const type = dv.getUint8(readerIndex)
-		readerIndex += 1
+		readerIndex += SIZEOF.BYTE
 
 		if (type === 0x00 || readerIndex >= size) {
 			break
 		}
 
+		if (!VALID_BSON_TYPE_BYTES.has(type)) {
+			throw new Error(`0x${byteToHex(type)} is not a known BSON type`)
+		}
+
 		const [keyLen, key] = dv.getCStringAndSize(readerIndex)
-		readerIndex += keyLen + 1
+		readerIndex += keyLen + SIZEOF.BYTE
 
 		const valueBytes = bsonValueBytes(type, readerIndex, dv)
 
