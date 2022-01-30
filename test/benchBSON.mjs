@@ -38,6 +38,26 @@ const deep = await readFile(PATH + 'deep_bson.bson', { encoding: null })
 const flat = await readFile(PATH + 'flat_bson.bson', { encoding: null })
 const full = await readFile(PATH + 'full_bson.bson', { encoding: null })
 
+import { cpus, totalmem } from 'os';
+const hw = cpus()
+const ram = totalmem() / (1024 ** 3)
+const platform = { name: hw[0].model, cores: hw.length, ram: `${ram}GB` }
+
+function fixedWidthNum(strings, ...values) {
+    const stringParts = [strings[0]];
+    for (const [idx, value] of values.entries()) {
+        if (typeof value === 'number') {
+            const numStr = Number.isInteger(value) ? String(value) : value.toFixed(4)
+            stringParts.push('`' + numStr + '`');
+        } else {
+            stringParts.push(String(value));
+        }
+        stringParts.push(strings[idx + 1]);
+    }
+
+    return stringParts.join('');
+}
+
 class Suite {
     constructor(name, options) {
         this.name = name
@@ -50,7 +70,6 @@ class Suite {
     }
 
     run() {
-        console.log(this.name);
         const results = new Map()
         for (const [name, test] of this.tests.entries()) {
             const measurements = new Array(this.options.iterations)
@@ -71,14 +90,7 @@ class Suite {
                 iterations: this.options.iterations
             }
             results.set(name, res)
-            this.options.onCycle({
-                target: `${name}
-            - iter   ${res.iterations}
-            - avg    ${res.mean.toFixed(4)}ms
-            - stddev ${(res.stddev).toFixed(2)}
-            - mode   ${res.mode.toFixed(4)}ms
-            - median ${res.median.toFixed(4)}ms`
-            })
+            console.log(fixedWidthNum`| ${name} | ${res.iterations} | ${res.mean}ms | ${res.stddev} | ${res.mode}ms | ${res.median}ms |`)
         }
 
         this.options.onComplete(results)
@@ -129,9 +141,6 @@ const options = {
     onError(event) {
         console.log('err:', event.target.error);
     },
-    onCycle(event) {
-        console.log(String(event.target))
-    },
     onComplete(results) {
         // console.log('Fastest is ', results)
     }
@@ -139,40 +148,51 @@ const options = {
 
 const deepSuite = new Suite('deep', options);
 deepSuite
-    .add('BSON.deserialize', function () {
+    .add('🍃 BSON.deserialize', function () {
         MongoDB_BSON.deserialize(deep)
     })
-    .add('BSONDocument.from', function () {
+    .add('👨‍💻 BSONDocument.from', function () {
         Neal_BSON.BSONDocument.from(deep)
     })
-    .add('BSONDocument.from.toRecord', function () {
+    .add('👨‍💻 BSONDocument.from.toRecord', function () {
         Neal_BSON.BSONDocument.from(deep).toRecord()
     });
 
 const fullSuite = new Suite('full', options);
 fullSuite
-    .add('BSON.deserialize', function () {
+    .add('🍃 BSON.deserialize', function () {
         MongoDB_BSON.deserialize(full)
     })
-    .add('BSONDocument.from', function () {
+    .add('👨‍💻 BSONDocument.from', function () {
         Neal_BSON.BSONDocument.from(full)
     })
-    .add('BSONDocument.from.toRecord', function () {
+    .add('👨‍💻 BSONDocument.from.toRecord', function () {
         Neal_BSON.BSONDocument.from(full).toRecord()
     });
 
 const flatSuite = new Suite('flat', options);
 flatSuite
-    .add('BSON.deserialize', function () {
+    .add('🍃 BSON.deserialize', function () {
         MongoDB_BSON.deserialize(flat)
     })
-    .add('BSONDocument.from', function () {
+    .add('👨‍💻 BSONDocument.from', function () {
         Neal_BSON.BSONDocument.from(flat)
     })
-    .add('BSONDocument.from.toRecord', function () {
+    .add('👨‍💻 BSONDocument.from.toRecord', function () {
         Neal_BSON.BSONDocument.from(flat).toRecord()
     });
 
+console.log(`# BSON Bench
+
+## Hardware
+- cpu: ${platform.name}
+- cores: ${platform.cores}
+- os: ${process.platform}
+- ram: ${platform.ram}
+
+## Results
+| name | iter | avg | stddev | mode | median |
+|-|-|-|-|-|-|`)
 deepSuite.run();
 flatSuite.run();
 fullSuite.run();

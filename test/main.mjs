@@ -10,11 +10,12 @@ const inspect = (object) => {
 	}, 2)
 }
 
+const e = new TextEncoder()
 /**
  * @param {string} utf16String
  * @returns {Uint8Array}
  */
-const encode_utf8 = (utf16String) => new Uint8Array(Array.from(unescape(encodeURIComponent(utf16String))).map(c => c.charCodeAt(0)))
+const encode_utf8 = (utf16String) => e.encode(utf16String)
 
 /**
  * @param {Uint8Array} bytes
@@ -23,7 +24,7 @@ const encode_utf8 = (utf16String) => new Uint8Array(Array.from(unescape(encodeUR
 const decode_utf8 = (bytes) => decodeURIComponent(escape(Array.from(bytes).map(b => String.fromCharCode(b)).join('')))
 
 
-function toHexString(buffer) {
+export function toHexString(buffer) {
 	const hex = []
 	for (let i = 0; i < buffer.length; i += 1) {
 		const byte = buffer[i]
@@ -41,7 +42,7 @@ function toHexString(buffer) {
  * @param string - representing what you want to encode into BSON
  * @returns BSON string with byte size encoded
  */
-const stringToUTF8HexBytes = str => {
+export const stringToUTF8HexBytes = str => {
 	const b = encode_utf8(str)
 	const len = b.byteLength
 	const ab = new ArrayBuffer(len + 4 + 1)
@@ -71,7 +72,7 @@ const stringToUTF8HexBytes = str => {
  * @param {string[]} array - sequences of hex digits broken up to be human readable
  * @returns
  */
-const bufferFromHexArray = array => {
+export const bufferFromHexArray = array => {
 	const string = array.concat(['00']).join('')
 	const size = string.length / 2 + 4
 

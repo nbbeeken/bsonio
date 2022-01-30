@@ -187,9 +187,8 @@ export class BSONValue {
 	 * @param {Uint8Array} bytes
 	 */
 	constructor(type, bytes) {
-		this.type = type
+		Object.defineProperty(this, 'type', { value: type, writable: false, configurable: false, enumerable: true })
 		this.bytes = bytes
-		this[$dv] = new BSONDataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength)
 	}
 
 	toString() {
@@ -203,6 +202,9 @@ export class BSONValue {
 	}
 
 	toNative(settings = {}) {
+		if (this[$dv] == null) {
+			this[$dv] = new BSONDataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength)
+		}
 		const dv = this[$dv]
 		switch (this.type) {
 			case BT.NULL: return null
