@@ -70,6 +70,18 @@ export const BT = Object.freeze({
 	MAX_KEY: 0x7F,
 })
 
+let DECODER
+if (getGlobal().TextDecoder) {
+	DECODER = new TextDecoder('utf-8', { fatal: true })
+} else {
+	// Still support ascii!
+	DECODER = {
+		decode() {
+			throw new Error('Environment cannot decode utf8')
+		}
+	}
+}
+
 const VALID_BSON_TYPE_BYTES = new Set(Object.values(BT))
 const BT_LOOKUP = Object.freeze(Object.fromEntries(Object.entries(BT).map(([typeName, typeByte]) => [typeByte, typeName])))
 
@@ -82,16 +94,7 @@ export class BSONDataView extends DataView {
 	constructor(buffer, byteOffset, byteLength) {
 		super(buffer, byteOffset, byteLength)
 		this[$bytes] = new Uint8Array(buffer, byteOffset, byteLength)
-		if (getGlobal().TextDecoder) {
-			this.decoder = new TextDecoder('utf-8', { fatal: true })
-		} else {
-			// Still support ascii!
-			this.decoder = {
-				decode() {
-					throw new Error('Environment cannot decode utf8')
-				}
-			}
-		}
+		this.decoder = DECODER;
 	}
 	/**
 	 * @param {number} [begin]
@@ -109,39 +112,30 @@ export class BSONDataView extends DataView {
 	}
 	/** @returns {number} */
 	getCStringLength(offset = 0) {
-		const nullTerminatorIndex = this[$bytes].subarray(offset).findIndex(byte => byte === 0) + offset
+		let nullTerminatorIndex
+		for (nullTerminatorIndex = offset; this[$bytes][nullTerminatorIndex] !== 0x00; nullTerminatorIndex++);
 		return nullTerminatorIndex - offset
-	}
-	/**
-	 * @param {number} [offset]
-	 * @returns {Uint8Array}
-	 */
-	getCStringSequence(offset = 0) {
-		return this[$bytes].subarray(offset, offset + this.getCStringLength(offset))
-	}
-	/**
-	 * @param {number} [offset]
-	 * @returns {string}
-	 */
-	getCString(offset = 0) {
-		const seq = this.getCStringSequence(offset)
-		const isASCII = seq.find(byte => byte > 0x7F) == null
-		if (isASCII) {
-			return Array.from(seq).map(v => String.fromCharCode(v)).join('')
-		}
-		return this.decoder.decode(seq)
 	}
 	/**
 	 * @param {number} [offset]
 	 * @returns {[number, string]}
 	 */
 	getCStringAndSize(offset = 0) {
-		const seq = this.getCStringSequence(offset)
-		const isASCII = seq.find(byte => byte > 0x7F) == null
+		let isASCII = true
+		let size = this.getCStringLength(offset)
+		const chars = new Array(size)
+		for (let i = 0; i < size; i++) {
+			const byte = this[$bytes][i + offset]
+			if (byte > 0x7F) {
+				isASCII = false
+				break
+			}
+			chars[i] = String.fromCharCode(byte)
+		}
 		if (isASCII) {
-			const chars = Array.from(seq).map(v => String.fromCharCode(v))
 			return [chars.length, chars.join('')]
 		}
+		const seq = this.subarray(offset, offset + size)
 		return [seq.byteLength, this.decoder.decode(seq)]
 	}
 	/**
@@ -151,19 +145,29 @@ export class BSONDataView extends DataView {
 	 */
 	getString(offset = 0) {
 		const size = this.getSize(offset)
-		const seq = this[$bytes].subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size)
-		if (seq[seq.byteLength - 1] !== 0x00) {
+		const nullTerminatorIndex = offset + SIZEOF.INT32 + size - 1
+		if (this[$bytes][nullTerminatorIndex] !== 0x00) {
 			throw new Error(`utf8 string must end in 0x00, size=${size}`)
 		}
-
-		const seqOfChar = this[$bytes].subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size - SIZEOF.BYTE)
-		const isASCII = seqOfChar.find(byte => byte > 0x7F) == null
+		let isASCII = true
+		const chars = new Array(size - 1)
+		for (
+			let byteIdx = offset + SIZEOF.INT32, charIdx = 0;
+			byteIdx < nullTerminatorIndex && charIdx < chars.length;
+			charIdx++, byteIdx++
+		) {
+			const byte = this[$bytes][byteIdx]
+			if (byte > 0x7F) {
+				isASCII = false
+				break
+			}
+			chars[charIdx] = String.fromCharCode(byte)
+		}
 		if (isASCII) {
-			const chars = Array.from(seqOfChar).map(v => String.fromCharCode(v))
 			return chars.join('')
 		}
-
-		return this.decoder.decode(seqOfChar)
+		const seq = this.subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size - 1)
+		return this.decoder.decode(seq)
 	}
 	/**
 	 * Returns a view on based on the LE int32 written at the offset.
@@ -238,7 +242,7 @@ export class BSONValue {
 
 			case BT.REGEXP: {
 				const [patternSize, pattern] = dv.getCStringAndSize(0)
-				const flags = dv.getCString(1 + patternSize)
+				const [, flags] = dv.getCStringAndSize(1 + patternSize)
 				return { pattern, flags }
 			}
 
@@ -297,7 +301,7 @@ function bsonValueBytes(type, readerIndex, dv) {
 
 		case BT.ARRAY:
 		case BT.DOCUMENT:
-			return dv.subarray(readerIndex, readerIndex + dv.getInt32(readerIndex, true) + SIZEOF.BYTE)
+			return dv.subarray(readerIndex, readerIndex + dv.getSize(readerIndex))
 
 		case BT.REGEXP: {
 			const patternSize = dv.getCStringLength(readerIndex)
@@ -330,7 +334,8 @@ export function* iterateBson(bytes) {
 		const type = dv.getUint8(readerIndex)
 		readerIndex += SIZEOF.BYTE
 
-		if (type === 0x00 || readerIndex >= size) {
+		if (type === 0x00) {
+			if (readerIndex < size) throw new Error(`readerIndex=${readerIndex} fell short of the size=${size}`)
 			break
 		}
 

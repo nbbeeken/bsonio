@@ -95,39 +95,35 @@ const bufferFromHexArray = array => {
 
 // const map = new BSONDocument()
 // // print(map)
-const doc = BSONDocument.from(bufferFromHexArray([
+const buf = bufferFromHexArray([
 	'10', // int32 type
 	'6100', // 'a' key with key null terminator
 	'01000000', // little endian int32
 	'08', // bool type
 	'6200', // 'b' key with key null terminator
-	'00', // false
+	'01', // true -false
 
 	'03', // doc
 	'6300', // 'c'
-	...[
-		'0F000000',
+	toHexString(bufferFromHexArray([
 		'10', // int32 type
 		'6100', // 'a' key with key null terminator
 		'01000000', // little endian int32
 		'08', // bool type
 		'6200', // 'b' key with key null terminator
-		'00', // false
-		'00'
-	],
+		'01', // true
+	])),
 
 	'04', // array
 	'6400', // 'd'
-	...[
-		'0F000000',
+	toHexString(bufferFromHexArray([
 		'10', // int32 type
-		'3000', // '0' key with key null terminator
+		'3000', // 'a' key with key null terminator
 		'01000000', // little endian int32
 		'08', // bool type
 		'3100', // 'b' key with key null terminator
-		'00', // false
-		'00'
-	],
+		'01', // true
+	])),
 
 	'02',
 	'6500',
@@ -197,8 +193,9 @@ const doc = BSONDocument.from(bufferFromHexArray([
 	'10',
 	'75F09F988100',
 	'01000000', // 0xf0, 0x9f, 0x98, 0x81
-]))
+])
 
+const doc = BSONDocument.from(buf)
 // console.log(doc)
 // const rec = doc.toRecord()
 // console.log(inspect(rec))

@@ -8,16 +8,11 @@
             "type": "node",
             "request": "launch",
             "name": "Debug Tests",
-            "sourceMaps": true,
             "stopOnEntry": false,
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/lib/test.js",
-            "outFiles": [
-                "${workspaceFolder}/lib/*"
-            ],
-            "preLaunchTask": "npm: pretest"
+            "program": "${workspaceFolder}/test/main.mjs",
         }
     ]
 }

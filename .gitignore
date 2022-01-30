@@ -5,3 +5,6 @@ node_modules
 typings
 docs
 *.tap
+test/bench-data
+.DS_store
+*.0x
