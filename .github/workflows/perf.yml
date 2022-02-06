@@ -1,13 +1,14 @@
-name: php-cs-fixer
+name: perf-test
 
 on:
   pull_request:
   push:
     branches:
       - "main"
+      - "try3"
 
 jobs:
-  php-cs-fixer:
+  perf-test:
     runs-on: ubuntu-latest
 
     steps:
