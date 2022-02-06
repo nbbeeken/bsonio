@@ -1,3 +1,5 @@
+import { BSONDataView } from "./mod.js";
+
 const EXPONENT_MAX = 6111n;
 const EXPONENT_MIN = -6176n;
 const EXPONENT_BIAS = 6176n;
@@ -36,7 +38,7 @@ export function toString(buffer: Uint8Array): string {
     // Note: bits in this routine are referred to starting at 0,
     // from the sign bit, towards the coefficient.
 
-    const dv = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+    const dv = new BSONDataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
 
     // decoded biased exponent (14 bits)
     let biased_exponent;
@@ -55,10 +57,7 @@ export function toString(buffer: Uint8Array): string {
     // Output string
     const string: string[] = [];
 
-    const low = dv.getBigUint64(0, true)
-    const high = dv.getBigUint64(8, true)
-
-    const asBigInt = (high << 64n) | low
+    const asBigInt = dv.getBigUint128(0, true)
 
     if (asBigInt & 0x8000_0000_0000_0000_0000_0000_0000_0000n) {
         // sign bit is set

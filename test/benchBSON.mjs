@@ -1,44 +1,60 @@
+//@ts-check
+
 import { performance } from 'perf_hooks'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile, writeFile, readdir, access, appendFile, unlink } from 'fs/promises'
+import * as path from 'path'
 import { EJSON } from 'bson';
 import * as MongoDB_BSON from 'bson';
-import * as Neal_BSON from '../src/mod.mjs';
-
-const PATH = './test/bench-data/extended_bson/'
-async function makeBSONFiles() {
-    await writeFile(PATH + 'deep_bson.bson',
-        MongoDB_BSON.serialize(
-            EJSON.parse(
-                await readFile(PATH + 'deep_bson.json', { encoding: 'utf8' }),
-                { relaxed: false }
-            )
-        )
-    )
-    await writeFile(PATH + 'flat_bson.bson',
-        MongoDB_BSON.serialize(
-            EJSON.parse(
-                await readFile(PATH + 'flat_bson.json', { encoding: 'utf8' }),
-                { relaxed: false }
-            )
-        )
-    )
-    await writeFile(PATH + 'full_bson.bson',
-        MongoDB_BSON.serialize(
-            EJSON.parse(
-                await readFile(PATH + 'full_bson.json', { encoding: 'utf8' }),
-                { relaxed: false }
-            )
-        )
-    )
-}
-// await makeBSONFiles()
-// process.exit(1)
-
-const deep = await readFile(PATH + 'deep_bson.bson', { encoding: null })
-const flat = await readFile(PATH + 'flat_bson.bson', { encoding: null })
-const full = await readFile(PATH + 'full_bson.bson', { encoding: null })
-
+import * as Neal_BSON from '../lib/mod.js';
 import { cpus, totalmem } from 'os';
+
+const log = async (msg) => {
+    console.log(msg)
+    await appendFile('./perf.md', msg + '\n', { encoding: 'utf8' })
+}
+
+try {
+    await unlink('./perf.md')
+} catch { }
+
+const INPUTS_PATH = './test/bench-data/'
+const ITERATIONS = 10_000
+
+const canAccess = async (f) => {
+    try {
+        await access(f)
+        return true
+    } catch (error) {
+        return false
+    }
+}
+
+async function BSONFiles() {
+    const inputFiles = (await readdir(INPUTS_PATH))
+        .filter(fileName => fileName.endsWith('.json'))
+        .map(fileName => path.join(INPUTS_PATH, fileName))
+        .sort()
+
+    const bsonFiles = []
+    for (const jsonFile of inputFiles) {
+        const bsonFileName = jsonFile.replace('.json', '.bson')
+        let bsonData
+        if (await canAccess(bsonFileName)) {
+            bsonData = await readFile(bsonFileName, { encoding: null })
+        } else {
+            const content = await readFile(jsonFile, { encoding: 'utf8' })
+            /** @type {any} */
+            const ejson = EJSON.parse(content, { relaxed: false })
+            bsonData = MongoDB_BSON.serialize(ejson, { ignoreUndefined: false })
+            await writeFile(bsonFileName, bsonData, { encoding: null })
+        }
+        bsonFiles.push({ name: path.basename(bsonFileName).replace('.bson', ''), bsonFileName, bsonData, parsed: Neal_BSON.BSONDocument.from(bsonData) })
+    }
+    return bsonFiles
+}
+
+const bsonTests = await BSONFiles()
+
 const hw = cpus()
 const ram = totalmem() / (1024 ** 3)
 const platform = { name: hw[0].model, cores: hw.length, ram: `${ram}GB` }
@@ -61,7 +77,6 @@ function fixedWidthNum(strings, ...values) {
 class Suite {
     constructor(name, options) {
         this.name = name
-        this.options = { iterations: 10_000, ...options }
         this.tests = new Map();
     }
     add(testName, testFn) {
@@ -69,12 +84,15 @@ class Suite {
         return this
     }
 
-    run() {
+    async run() {
         const results = new Map()
+        await log(`\n### Results - ${this.name}\n`)
+        await log('| name | avg | stddev | mode | median |')
+        await log('|-|-|-|-|-|')
         for (const [name, test] of this.tests.entries()) {
-            const measurements = new Array(this.options.iterations)
+            const measurements = new Array(ITERATIONS)
 
-            for (let i = 0; i < this.options.iterations; i++) {
+            for (let i = 0; i < ITERATIONS; i++) {
                 const start = performance.now()
                 test()
                 const end = performance.now()
@@ -86,14 +104,12 @@ class Suite {
                 mean: Suite.mean(measurements),
                 stddev: Suite.stddev(measurements),
                 mode: Suite.mode(measurements),
-                median: Suite.median(measurements),
-                iterations: this.options.iterations
+                median: Suite.median(measurements)
             }
             results.set(name, res)
-            console.log(fixedWidthNum`| ${name} | ${res.iterations} | ${res.mean}ms | ${res.stddev} | ${res.mode}ms | ${res.median}ms |`)
+            await log(fixedWidthNum`| ${name} | ${res.mean}ms | ${res.stddev} | ${res.mode}ms | ${res.median}ms |`)
         }
-
-        this.options.onComplete(results)
+        await log(`\nFastest: ${Array.from(results.entries()).sort(([, { mean: meanA }], [, { mean: meanB }]) => meanA - meanB)[0][0]}`)
     }
 
     static mean(numbers) {
@@ -137,62 +153,42 @@ class Suite {
     }
 }
 
-const options = {
-    onError(event) {
-        console.log('err:', event.target.error);
-    },
-    onComplete(results) {
-        // console.log('Fastest is ', results)
-    }
+const suites = []
+
+for (const { name, bsonData, parsed } of bsonTests) {
+    const suite = new Suite(name)
+    suite
+        .add('🍃 BSON.deserialize', function () {
+            MongoDB_BSON.deserialize(bsonData)
+        })
+        .add('👨‍💻 entriesFromBSON', function () {
+            Array.from(Neal_BSON.entriesFromBSON(bsonData))
+        })
+        .add('👨‍💻 BSONDocument.from', function () {
+            Neal_BSON.BSONDocument.from(bsonData)
+        })
+        .add('👨‍💻 BSONDocument.toRecord', function () {
+            parsed.toRecord()
+        });
+    suites.push(suite)
 }
 
-const deepSuite = new Suite('deep', options);
-deepSuite
-    .add('🍃 BSON.deserialize', function () {
-        MongoDB_BSON.deserialize(deep)
-    })
-    .add('👨‍💻 BSONDocument.from', function () {
-        Neal_BSON.BSONDocument.from(deep)
-    })
-    .add('👨‍💻 BSONDocument.from.toRecord', function () {
-        Neal_BSON.BSONDocument.from(deep).toRecord()
-    });
-
-const fullSuite = new Suite('full', options);
-fullSuite
-    .add('🍃 BSON.deserialize', function () {
-        MongoDB_BSON.deserialize(full)
-    })
-    .add('👨‍💻 BSONDocument.from', function () {
-        Neal_BSON.BSONDocument.from(full)
-    })
-    .add('👨‍💻 BSONDocument.from.toRecord', function () {
-        Neal_BSON.BSONDocument.from(full).toRecord()
-    });
-
-const flatSuite = new Suite('flat', options);
-flatSuite
-    .add('🍃 BSON.deserialize', function () {
-        MongoDB_BSON.deserialize(flat)
-    })
-    .add('👨‍💻 BSONDocument.from', function () {
-        Neal_BSON.BSONDocument.from(flat)
-    })
-    .add('👨‍💻 BSONDocument.from.toRecord', function () {
-        Neal_BSON.BSONDocument.from(flat).toRecord()
-    });
-
-console.log(`# BSON Bench
+await log(`# BSON Bench
 
 ## Hardware
 - cpu: ${platform.name}
 - cores: ${platform.cores}
 - os: ${process.platform}
 - ram: ${platform.ram}
+- iterations: ${ITERATIONS}
 
-## Results
-| name | iter | avg | stddev | mode | median |
-|-|-|-|-|-|-|`)
-deepSuite.run();
-flatSuite.run();
-fullSuite.run();
+## Inputs
+
+| name | bytes | top-level keys |
+|-|-|-|
+${bsonTests.map(({ name, bsonData, parsed }) => `| ${name}  | ${bsonData.byteLength} | ${Array.from(parsed.keys()).length} |`).join('\n')}
+`)
+
+for (const s of suites) {
+    await s.run()
+}

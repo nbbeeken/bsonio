@@ -1,24 +1,18 @@
 {
-	"compilerOptions": {
-		"allowJs": true,
-		"target": "ESNext",
-		"module": "ESNext",
-		"outDir": "lib",
-		"emitDeclarationOnly": false,
-		"moduleResolution": "node",
-		"removeComments": true,
-		"sourceMap": true,
-		"useDefineForClassFields": true,
-		"strict": true,
-		"alwaysStrict": true,
-		"pretty": false,
-		"allowSyntheticDefaultImports": true,
-		"declaration": true,
-		"declarationDir": "typings",
-		"declarationMap": true,
-		"resolveJsonModule": true,
-	},
-	"include": [
-		"src/**/*",
-	]
+    "compilerOptions": {
+        "allowJs": false,
+        "target": "ESNext",
+        "module": "ESNext",
+        "outDir": "lib",
+        "emitDeclarationOnly": false,
+        "moduleResolution": "node",
+        "removeComments": false,
+        "sourceMap": true,
+        "strict": true,
+        "alwaysStrict": true,
+        "declaration": true,
+    },
+    "include": [
+        "src/**/*",
+    ]
 }

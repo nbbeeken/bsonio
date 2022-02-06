@@ -25,6 +25,7 @@ const bytesToHex = (bytes: Uint8Array): string => Array.from(bytes).map(b => byt
 const $size = Symbol('size')
 const $dv = Symbol('dataView')
 const $bytes = Symbol('bytes')
+const $type = Symbol('type')
 const $isArray = Symbol('isArray')
 export const MinKey = Symbol('MinKey')
 export const MaxKey = Symbol('MaxKey')
@@ -84,13 +85,11 @@ const VALID_BSON_TYPE_BYTES = new Set(Object.values(BT))
 const BT_LOOKUP = Object.freeze(Object.fromEntries(Object.entries(BT).map(([typeName, typeByte]) => [typeByte, typeName])))
 
 export class BSONDataView extends DataView {
-    decoder: TextDecoder
     [$bytes]: Uint8Array
 
     constructor(buffer: ArrayBufferLike, byteOffset: number, byteLength: number) {
         super(buffer, byteOffset, byteLength)
         this[$bytes] = new Uint8Array(buffer, byteOffset, byteLength)
-        this.decoder = DECODER
     }
 
     subarray(begin?: number, end?: number) {
@@ -122,7 +121,7 @@ export class BSONDataView extends DataView {
             return [chars.length, chars.join('')]
         }
         const seq = this.subarray(offset, offset + size)
-        return [seq.byteLength, this.decoder.decode(seq)]
+        return [seq.byteLength, DECODER.decode(seq)]
     }
     /** Decodes a string a view on based on the LE int32 written at the offset */
     getString(offset = 0) {
@@ -149,7 +148,7 @@ export class BSONDataView extends DataView {
             return chars.join('')
         }
         const seq = this.subarray(offset + SIZEOF.INT32, offset + SIZEOF.INT32 + size - 1)
-        return this.decoder.decode(seq)
+        return DECODER.decode(seq)
     }
     /** Returns a view on based on the LE int32 written at the offset.*/
     getSizedSequence(offset = 0) {
@@ -157,30 +156,48 @@ export class BSONDataView extends DataView {
         const seq = this[$bytes].subarray(offset, offset + 4 + size)
         return seq
     }
+    getBigUint128(offset = 0, littleEndian = false) {
+        if (littleEndian) {
+            const low = this.getBigUint64(0, true)
+            const high = this.getBigUint64(8, true)
+            return (high << 64n) | low
+        } else {
+            const high = this.getBigUint64(0, false)
+            const low = this.getBigUint64(8, false)
+            return (high << 64n) | low
+        }
+    }
 }
 
 export type BSONValueSettings = Record<string, any>
 
 export class BSONValue {
     [$dv]?: BSONDataView
-    bytes!: Uint8Array
-    readonly type!: number
+    bytes: Uint8Array
+    type: number
     /**
      * @param {number} type BSON Type
      * @param {Uint8Array} bytes
      */
     constructor(type: number, bytes: Uint8Array) {
-        Object.defineProperty(this, 'type', { value: type, writable: false, configurable: false, enumerable: true })
-        Object.defineProperty(this, 'bytes', { value: bytes, writable: false, configurable: false, enumerable: true })
+        this.type = type
+        this.bytes = bytes
+        // Symbol properties also have a performance cost, its small but we shouldn't pay it on such a hot path
+        // this[$type] = type
+        // this[$bytes] = bytes
+        // defineProperty TANKS performance :(
+        // Object.defineProperty(this, 'type', { value: type, writable: false, configurable: false, enumerable: true })
+        // Object.defineProperty(this, 'bytes', { value: bytes, writable: false, configurable: false, enumerable: true })
     }
 
     toString() {
-        // @ts-ignore
         return `BSONValue{ type: ${this.type}(${BT_LOOKUP[this.type]}) bytes: "${bytesToHex(this.bytes)}" }`
     }
+
     inspect() {
         return this.toString()
     }
+
     [Symbol.for('nodejs.util.inspect.custom')]() {
         return this.toString()
     }
@@ -189,7 +206,7 @@ export class BSONValue {
         if (this[$dv] == null) {
             this[$dv] = new BSONDataView(this.bytes.buffer, this.bytes.byteOffset, this.bytes.byteLength)
         }
-        // @ts-ignore
+        // @ts-expect-error - TS cannot narrow the type of a symbol property
         return this[$dv]
     }
 
@@ -371,29 +388,41 @@ export class BSONValue {
 
 function bsonValueBytes(type: number, readerIndex: number, dv: BSONDataView) {
     switch (type) {
-        case BT.NULL: return EMPTY_VALUE
-        case BT.UNDEFINED: return EMPTY_VALUE
-        case BT.MIN_KEY: return EMPTY_VALUE
-        case BT.MAX_KEY: return EMPTY_VALUE
-        case BT.INT32: return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32)
+        case BT.NULL:
+        case BT.UNDEFINED:
+        case BT.MIN_KEY:
+        case BT.MAX_KEY:
+            return EMPTY_VALUE
+
+        case BT.INT32:
+            return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32)
 
         case BT.DOUBLE:
             return dv.subarray(readerIndex, readerIndex + SIZEOF.FLOAT64)
+
         case BT.INT64:
         case BT.DATE:
         case BT.TIMESTAMP:
             return dv.subarray(readerIndex, readerIndex + SIZEOF.INT64)
 
-        case BT.BOOLEAN: return dv.subarray(readerIndex, readerIndex + SIZEOF.BYTE)
-        case BT.STRING: return dv.getSizedSequence(readerIndex)
-        case BT.SYMBOL: return dv.getSizedSequence(readerIndex)
-        case BT.JS_CODE: return dv.getSizedSequence(readerIndex)
+        case BT.DEC128:
+            return dv.subarray(readerIndex, readerIndex + SIZEOF.D128)
+
+        case BT.OID:
+            return dv.subarray(readerIndex, readerIndex + SIZEOF.OID)
+
+        case BT.BOOLEAN:
+            return dv.subarray(readerIndex, readerIndex + SIZEOF.BYTE)
+
+        case BT.STRING:
+        case BT.SYMBOL:
+        case BT.JS_CODE:
+            return dv.getSizedSequence(readerIndex)
+
         case BT.BINARY: {
             const size = dv.getSize(readerIndex)
             return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32 + SIZEOF.BYTE + size)
         }
-        case BT.DEC128: return dv.subarray(readerIndex, readerIndex + SIZEOF.D128)
-        case BT.OID: return dv.subarray(readerIndex, readerIndex + SIZEOF.OID)
 
         case BT.DB_POINTER:
             return dv.subarray(readerIndex, readerIndex + SIZEOF.INT32 + SIZEOF.OID + dv.getInt32(readerIndex, true))
@@ -404,7 +433,7 @@ function bsonValueBytes(type: number, readerIndex: number, dv: BSONDataView) {
 
         case BT.REGEXP: {
             const patternSize = dv.getCStringLength(readerIndex)
-            const flagsSize = dv.getCStringLength(readerIndex + 1 + patternSize)
+            const flagsSize = dv.getCStringLength(readerIndex + SIZEOF.BYTE + patternSize)
             return dv.subarray(readerIndex, readerIndex + patternSize + flagsSize + SIZEOF.BYTE + SIZEOF.BYTE)
         }
 
@@ -418,10 +447,10 @@ function bsonValueBytes(type: number, readerIndex: number, dv: BSONDataView) {
     }
 }
 
-export function* iterateBson(bytes: Uint8Array): Generator<readonly [key: string, value: BSONValue]> {
-    let dv = new BSONDataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+export function* entriesFromBSON(bsonBytes: Uint8Array): Generator<{ readonly key: string, readonly type: number, readonly bytes: Uint8Array }> {
+    let dv = new BSONDataView(bsonBytes.buffer, bsonBytes.byteOffset, bsonBytes.byteLength)
     const size = dv.getSize()
-    dv = new BSONDataView(bytes.buffer, bytes.byteOffset, size)
+    dv = new BSONDataView(bsonBytes.buffer, bsonBytes.byteOffset, size)
 
     let readerIndex = 4
 
@@ -434,18 +463,14 @@ export function* iterateBson(bytes: Uint8Array): Generator<readonly [key: string
             break
         }
 
-        if (!VALID_BSON_TYPE_BYTES.has(type)) {
-            throw new Error(`0x${byteToHex(type)} is not a known BSON type`)
-        }
-
         const [keyLen, key] = dv.getCStringAndSize(readerIndex)
         readerIndex += keyLen + SIZEOF.BYTE
 
-        const valueBytes = bsonValueBytes(type, readerIndex, dv)
+        const bytes = bsonValueBytes(type, readerIndex, dv)
 
-        readerIndex += valueBytes.byteLength
+        readerIndex += bytes.byteLength
 
-        yield [key, new BSONValue(type, valueBytes)]
+        yield { key, type, bytes }
     }
 }
 
@@ -473,17 +498,17 @@ export class BSONDocument extends Map {
         map[$size] = size
         map[$bytes] = bytes
 
-        const entries = iterateBson(bytes)
-        for (const [key, value] of entries) {
+        const entries = entriesFromBSON(bytes)
+        for (const bsonEntry of entries) {
             if (isArray) {
-                if (!/\d+/.test(key)) {
-                    throw new Error(`Array index must be a numerical key, got "${key}"`)
+                if (!/\d+/.test(bsonEntry.key)) {
+                    throw new Error(`Array index must be a numerical key, got "${bsonEntry.key}"`)
                 }
-                if (!(Number(key) >= 0 && Number(key) <= MAX_ARRAY_INDEX)) {
-                    throw new Error(`Array index must be between 0 and ${MAX_ARRAY_INDEX}, got ${key}`)
+                if (!(Number(bsonEntry.key) >= 0 && Number(bsonEntry.key) <= MAX_ARRAY_INDEX)) {
+                    throw new Error(`Array index must be between 0 and ${MAX_ARRAY_INDEX}, got ${bsonEntry.key}`)
                 }
             }
-            map.set(key, value)
+            map.set(bsonEntry.key, bsonEntry)
         }
 
         return map
@@ -505,7 +530,7 @@ export class BSONDocument extends Map {
     toRecord() {
         const o = this[$isArray] ? [] : Object.create(null)
 
-        for (const [key, bsonValue] of this.entries()) {
+        for (const [key, bsonValue] of this.entiresAsBSONValues()) {
             if (key === '__proto__') {
                 throw Error('say no to proto')
             } else {
@@ -521,14 +546,26 @@ export class BSONDocument extends Map {
     }
 
     toEJSON() {
-        if (!this[$isArray]) return `{${Array.from(this.entries()).map(([k, v]) => `"${k}":${v instanceof BSONValue ? v.toEJSON() : v}`).join(',')}}`
-        else return this.asArray().toEJSON()
+        if (this[$isArray]) {
+            return this.asArray().toEJSON()
+        }
+        const sb = []
+        for (const [key, bsonValue] of this.entiresAsBSONValues()) {
+            sb.push(`"${key}":${bsonValue.toEJSON()}`)
+        }
+        return `{${sb.join(',')}}`
+    }
+
+    *entiresAsBSONValues() {
+        for (const [key, { type, bytes }] of this.entries()) {
+            yield [key, new BSONValue(type, bytes)]
+        }
     }
 
     asArray() {
         if (this[$isArray] === false) throw new Error(`Document is not an array ${this.toString()}`)
         const array = new BSONArray(this.size)
-        for (const [key, value] of this.entries()) {
+        for (const [key, value] of this.entiresAsBSONValues()) {
             array[key] = value
         }
         return array
@@ -542,7 +579,7 @@ export class BSONDocument extends Map {
 
 export class BSONArray extends Array<BSONValue> {
     toEJSON() {
-        return `[${Array.from(this.values()).map(v => v instanceof BSONValue ? v.toEJSON() : v).join(',')}]`
+        return `[${Array.from(this.values()).map(v => v.toEJSON()).join(',')}]`
     }
     [Symbol.species]() {
         return BSONArray

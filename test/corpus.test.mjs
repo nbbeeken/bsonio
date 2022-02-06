@@ -83,7 +83,7 @@ describe('BSON Corpus Tests', () => {
                     it(test.description, () => {
                         const doc = BSONDocument.from(test.bytes_canonical_bson)
                         const keys = Array.from(doc.keys())
-                        const values = Array.from(doc.values()).map(v => parseJSON(v.toEJSON()))
+                        const values = Array.from(doc.entiresAsBSONValues()).map(([, v]) => parseJSON(v.toEJSON()))
                         const expected = JSON.parse(test.canonical_extjson)
                         expect(keys).to.deep.equal(Object.keys(expected))
                         expect(values).to.deep.equal(Object.values(expected))
@@ -95,9 +95,16 @@ describe('BSON Corpus Tests', () => {
             describe('decodeErrors', () => {
                 for (const test of suite.decodeErrors ?? []) {
                     it.skip(test.description, () => {
-                        expect(() => {
-                            BSONDocument.from(test.bytes_bson)
-                        }).to.throw()
+                        let thrownError = null
+                        let doc = null
+                        try {
+                            doc = BSONDocument.from(test.bytes_bson)
+                            console.log(doc)
+                        } catch (error) {
+                            thrownError = error
+                        }
+                        expect(doc).to.not.exist;
+                        expect(thrownError).to.exist;
                     })
                 }
             })
