@@ -1,19 +1,21 @@
 {
-	"cSpell.words": [
-		"bson",
-		"bsonio",
-		"bsontype",
-		"bytesify",
-		"esbuild",
-		"extjson",
-		"iife",
-		"outfile",
-		"sourcemap",
-		"pojo",
-		"tsdoc",
-		"typedoc"
-	],
-	"typescript.tsdk": "./node_modules/typescript",
-	"editor.formatOnSave": true,
-	"search.useIgnoreFiles": false
+    "cSpell.words": [
+        "bson",
+        "bsonio",
+        "bsontype",
+        "bytesify",
+        "EJSON",
+        "esbuild",
+        "extjson",
+        "iife",
+        "outfile",
+        "pojo",
+        "sourcemap",
+        "tsdoc",
+        "typedoc"
+    ],
+    "typescript.tsdk": "./node_modules/typescript",
+    "editor.formatOnSave": true,
+    "search.useIgnoreFiles": false,
+    "mochaExplorer.files": "test/corpus.test.mjs"
 }
