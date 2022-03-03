@@ -2,6 +2,7 @@
 
 import { BASE64 } from "./base64.js"
 import { D128 } from "./d128.js"
+import { UTF8Decoder } from './utf8.js'
 
 const checkForMath = (potentialGlobal: any) => {
     return potentialGlobal && potentialGlobal.Math == Math && potentialGlobal
@@ -73,12 +74,7 @@ let DECODER: TextDecoder
 if (getGlobal().TextDecoder) {
     DECODER = new TextDecoder('utf-8', { fatal: true })
 } else {
-    // Still supports ascii!
-    DECODER = {
-        decode() {
-            throw new Error('Environment cannot decode utf8')
-        }
-    } as unknown as TextDecoder
+    DECODER = new UTF8Decoder()
 }
 
 const VALID_BSON_TYPE_BYTES = new Set(Object.values(BT))
@@ -105,7 +101,7 @@ export class BSONDataView extends DataView {
         for (nullTerminatorIndex = offset; this[$bytes][nullTerminatorIndex] !== 0x00; nullTerminatorIndex++);
         return nullTerminatorIndex - offset
     }
-    getCStringAndSize(offset = 0): [length: number, cString: string] {
+    getCStringAndSize(offset = 0): { length: number, cString: string } {
         let isASCII = true
         let size = this.getCStringLength(offset)
         const chars = new Array(size)
@@ -118,10 +114,10 @@ export class BSONDataView extends DataView {
             chars[i] = String.fromCharCode(byte)
         }
         if (isASCII) {
-            return [chars.length, chars.join('')]
+            return { length: chars.length, cString: chars.join('') }
         }
         const seq = this.subarray(offset, offset + size)
-        return [seq.byteLength, DECODER.decode(seq)]
+        return { length: seq.byteLength, cString: DECODER.decode(seq) }
     }
     /** Decodes a string a view on based on the LE int32 written at the offset */
     getString(offset = 0) {
@@ -173,21 +169,21 @@ export type BSONValueSettings = Record<string, any>
 
 export class BSONValue {
     [$dv]?: BSONDataView
-    bytes: Uint8Array
-    type: number
+    bytes!: Uint8Array
+    type!: number
     /**
      * @param {number} type BSON Type
      * @param {Uint8Array} bytes
      */
     constructor(type: number, bytes: Uint8Array) {
-        this.type = type
-        this.bytes = bytes
+        // this.type = type
+        // this.bytes = bytes
         // Symbol properties also have a performance cost, its small but we shouldn't pay it on such a hot path
         // this[$type] = type
         // this[$bytes] = bytes
         // defineProperty TANKS performance :(
-        // Object.defineProperty(this, 'type', { value: type, writable: false, configurable: false, enumerable: true })
-        // Object.defineProperty(this, 'bytes', { value: bytes, writable: false, configurable: false, enumerable: true })
+        Object.defineProperty(this, 'type', { value: type, writable: false, configurable: false, enumerable: true })
+        Object.defineProperty(this, 'bytes', { value: bytes, writable: false, configurable: false, enumerable: true })
     }
 
     toString() {
@@ -367,8 +363,8 @@ export class BSONValue {
     }
     asRegExp(settings: BSONValueSettings = {}) {
         if (this.type !== BT.REGEXP) throw new Error('Cannot interpret as BSON RegExp')
-        const [patternSize, pattern] = this.dv.getCStringAndSize(0)
-        const [, flags] = this.dv.getCStringAndSize(1 + patternSize)
+        const { length: patternSize, cString: pattern } = this.dv.getCStringAndSize(0)
+        const { cString: flags } = this.dv.getCStringAndSize(1 + patternSize)
         return { $regularExpression: { pattern, options: flags } }
     }
     asDBPointer(settings: BSONValueSettings = {}) {
@@ -463,14 +459,14 @@ export function* entriesFromBSON(bsonBytes: Uint8Array): Generator<{ readonly ke
             break
         }
 
-        const [keyLen, key] = dv.getCStringAndSize(readerIndex)
-        readerIndex += keyLen + SIZEOF.BYTE
+        const { length, cString } = dv.getCStringAndSize(readerIndex)
+        readerIndex += length + SIZEOF.BYTE
 
         const bytes = bsonValueBytes(type, readerIndex, dv)
 
         readerIndex += bytes.byteLength
 
-        yield { key, type, bytes }
+        yield { key: cString, type, bytes }
     }
 }
 

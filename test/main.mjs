@@ -1,4 +1,59 @@
-import { BSONDocument } from '../lib/mod.js'
+import { BSONDocument, getGlobal } from '../lib/mod.js'
+
+(function (window) {
+    "use strict";
+    var log = Math.log;
+    var LN2 = Math.LN2;
+    var clz32 = window.Math.clz32 || function (x) { return 31 - log(x >>> 0) / LN2 | 0 };
+    var fromCharCode = window.String.fromCharCode;
+    var patchedU8Array = window.Uint8Array || Array;
+
+    //////////////////////////////////////////////////////////////////////////////////////
+    function encoderReplacer(nonAsciiChars) {
+        // make the UTF string into a binary UTF-8 encoded string
+        var point = nonAsciiChars.charCodeAt(0) | 0;
+        if (0xD800 <= point) {
+            if (point < 0xDC00) {
+                var nextcode = nonAsciiChars.charCodeAt(1) | 0; // defaults to 0 when NaN, causing null replacement character
+
+                if (0xDC00 <= nextcode && nextcode <= 0xDFFF) {
+                    //point = ((point - 0xD800)<<10) + nextcode - 0xDC00 + 0x10000|0;
+                    point = (point << 10) + nextcode - 0x35fdc00 | 0;
+                    if (point > 0xffff)
+                        return fromCharCode(
+                            (0x1e/*0b11110*/ << 3) | (point >>> 18),
+                            (0x2/*0b10*/ << 6) | ((point >>> 12) & 0x3f/*0b00111111*/),
+                            (0x2/*0b10*/ << 6) | ((point >>> 6) & 0x3f/*0b00111111*/),
+                            (0x2/*0b10*/ << 6) | (point & 0x3f/*0b00111111*/)
+                        );
+                } else point = 65533/*0b1111111111111101*/;//return '\xEF\xBF\xBD';//fromCharCode(0xef, 0xbf, 0xbd);
+            } else if (point <= 0xDFFF) {
+                point = 65533/*0b1111111111111101*/;//return '\xEF\xBF\xBD';//fromCharCode(0xef, 0xbf, 0xbd);
+            }
+        }
+		/*if (point <= 0x007f) return nonAsciiChars;
+		else */if (point <= 0x07ff) {
+            return fromCharCode((0x6 << 5) | (point >>> 6), (0x2 << 6) | (point & 0x3f));
+        } else return fromCharCode(
+            (0xe/*0b1110*/ << 4) | (point >>> 12),
+            (0x2/*0b10*/ << 6) | ((point >>> 6) & 0x3f/*0b00111111*/),
+            (0x2/*0b10*/ << 6) | (point & 0x3f/*0b00111111*/)
+        );
+    }
+    function TextEncoder() { };
+    TextEncoder.prototype.encode = function (inputString) {
+        // 0xc0 => 0b11000000; 0xff => 0b11111111; 0xc0-0xff => 0b11xxxxxx
+        // 0x80 => 0b10000000; 0xbf => 0b10111111; 0x80-0xbf => 0b10xxxxxx
+        var encodedString = inputString === void 0 ? "" : ("" + inputString).replace(/[\x80-\uD7ff\uDC00-\uFFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF]?/g, encoderReplacer);
+        var len = encodedString.length | 0, result = new patchedU8Array(len);
+        var i = 0;
+        for (; i < len; i = i + 1 | 0)
+            result[i] = encodedString.charCodeAt(i) | 0;
+        return result;
+    };
+
+    window.TextEncoder = TextEncoder;
+})(getGlobal());
 
 const inspect = (object) => {
     return JSON.stringify(object, (k, val) => {
