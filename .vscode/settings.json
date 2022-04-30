@@ -4,18 +4,41 @@
         "bsonio",
         "bsontype",
         "bytesify",
+        "camelcase",
         "EJSON",
+        "eqeqeq",
         "esbuild",
         "extjson",
+        "ffffn",
+        "fffn",
         "iife",
         "outfile",
+        "plusplus",
         "pojo",
         "sourcemap",
         "tsdoc",
-        "typedoc"
+        "typedoc",
+        "xffff"
     ],
     "typescript.tsdk": "./node_modules/typescript",
     "editor.formatOnSave": true,
     "search.useIgnoreFiles": false,
-    "mochaExplorer.files": "test/corpus.test.mjs"
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "[json]": {
+        "editor.formatOnSave": true
+    },
+    "[jsonc]": {
+        "editor.formatOnSave": true
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": false
+        }
+    },
 }
