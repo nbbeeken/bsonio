@@ -251,8 +251,12 @@ const buf = bufferFromHexArray([
     '01000000', // 0xf0, 0x9f, 0x98, 0x81
 ])
 
-const doc = BSONDocument.from(buf)
+// const doc = BSONDocument.from(buf)
 // console.log(doc)
 // const rec = doc.toRecord()
 // console.log(inspect(rec))
-console.log(JSON.stringify(JSON.parse(doc.toEJSON()), undefined, 2))
+// console.log(JSON.stringify(JSON.parse(doc.toEJSON()), undefined, 2))
+import { mappedEntriesFromBSON } from '../lib/min/entries.js'
+const m = new Map(mappedEntriesFromBSON(buf))
+console.log(m)
+console.log(new Map(mappedEntriesFromBSON(m.get('c').bytes)))

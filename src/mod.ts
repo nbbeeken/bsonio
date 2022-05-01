@@ -90,7 +90,7 @@ const DECODER: TextDecoder = getGlobal<{ TextDecoder?: typeof TextDecoder }>().T
 	: new UTF8Decoder()
 
 const VALID_BSON_TYPE_BYTES = new Set(Object.values(BT))
-const BT_LOOKUP = Object.freeze(
+export const BT_LOOKUP = Object.freeze(
 	Object.fromEntries(
 		Object.entries(BT).map(([typeName, typeByte]: readonly [typeName: string, typeByte: number]) => [
 			typeByte,

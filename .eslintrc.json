@@ -17,7 +17,7 @@
 		"no-bitwise": "off",
 		"no-magic-numbers": "off",
 		"one-var": ["error", "never"],
-		"func-style": ["error", "expression"],
+		"func-style": "off",
 		"no-ternary": "off",
 		"no-mixed-operators": "off",
 		"max-statements": "off",
