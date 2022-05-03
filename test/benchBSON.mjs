@@ -1,5 +1,3 @@
-//@ts-check
-
 import { performance } from 'perf_hooks'
 import { readFile, writeFile, readdir, access, appendFile, unlink } from 'fs/promises'
 import * as path from 'path'
@@ -18,7 +16,7 @@ try {
 } catch { }
 
 const INPUTS_PATH = './test/bench-data/'
-const ITERATIONS = 10_000
+const ITERATIONS = 100
 
 const canAccess = async (f) => {
     try {
@@ -48,7 +46,7 @@ async function BSONFiles() {
             bsonData = MongoDB_BSON.serialize(ejson, { ignoreUndefined: false })
             await writeFile(bsonFileName, bsonData, { encoding: null })
         }
-        bsonFiles.push({ name: path.basename(bsonFileName).replace('.bson', ''), bsonFileName, bsonData, parsed: Neal_BSON.BSONDocument.from(bsonData) })
+        bsonFiles.push({ name: path.basename(bsonFileName).replace('.bson', ''), bsonFileName, bsonData })
     }
     return bsonFiles
 }
@@ -164,12 +162,9 @@ for (const { name, bsonData, parsed } of bsonTests) {
         .add('👨‍💻 entriesFromBSON', function () {
             Array.from(Neal_BSON.entriesFromBSON(bsonData))
         })
-        .add('👨‍💻 BSONDocument.from', function () {
-            Neal_BSON.BSONDocument.from(bsonData)
+        .add('👨‍💻 recurse entries', function () {
+            Neal_BSON.bsonDocument(bsonData)
         })
-        .add('👨‍💻 BSONDocument.toRecord', function () {
-            parsed.toRecord()
-        });
     suites.push(suite)
 }
 
@@ -186,7 +181,7 @@ await log(`# BSON Bench
 
 | name | bytes | top-level keys |
 |-|-|-|
-${bsonTests.map(({ name, bsonData, parsed }) => `| ${name}  | ${bsonData.byteLength} | ${Array.from(parsed.keys()).length} |`).join('\n')}
+${bsonTests.map(({ name, bsonData, parsed }) => `| ${name}  | ${bsonData.byteLength} | -- |`).join('\n')}
 `)
 
 for (const s of suites) {

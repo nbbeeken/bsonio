@@ -1,5 +1,3 @@
-import { BSONDocument, getGlobal } from '../lib/mod.js'
-
 (function (window) {
     "use strict";
     var log = Math.log;
@@ -53,7 +51,7 @@ import { BSONDocument, getGlobal } from '../lib/mod.js'
     };
 
     window.TextEncoder = TextEncoder;
-})(getGlobal());
+})(globalThis);
 
 const inspect = (object) => {
     return JSON.stringify(object, (k, val) => {
@@ -256,7 +254,22 @@ const buf = bufferFromHexArray([
 // const rec = doc.toRecord()
 // console.log(inspect(rec))
 // console.log(JSON.stringify(JSON.parse(doc.toEJSON()), undefined, 2))
-import { mappedEntriesFromBSON } from '../lib/min/entries.js'
-const m = new Map(mappedEntriesFromBSON(buf))
-console.log(m)
-console.log(new Map(mappedEntriesFromBSON(m.get('c').bytes)))
+import { bsonDocument } from '../lib/mod.js'
+// const m = new Map(mappedEntriesFromBSON(buf))
+// console.log(m)
+// console.log(new Map(mappedEntriesFromBSON(m.get('c').bytes)))
+
+function coolTransform (entry, parent, root) {
+    if (entry){
+        entry.myProp = 1
+        return entry
+    } else if (parent) {
+        return parent
+    } else if (root) {
+        root.done = true
+    }
+}
+for (let index = 0; index < 100000000; index++) {
+    const doc = bsonDocument(buf, coolTransform)
+    // console.log(inspect(doc, {depth: Infinity, colors: true}));
+}
