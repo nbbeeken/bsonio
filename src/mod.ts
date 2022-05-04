@@ -104,7 +104,7 @@ export interface BSONEntry {
 	readonly index: number
 }
 
-export function* entriesFromBSON(bsonBytes: Uint8Array): Generator<BSONEntry, number> {
+export function* entriesFromBSON(bsonBytes: Uint8Array): Generator<BSONEntry, number, void> {
 	if (bsonBytes.byteLength < BSON_MIN_SIZE) {
 		throw new RawBSONError('buffer must contain at least 5 bytes')
 	}
@@ -204,7 +204,7 @@ export function* entriesFromBSON(bsonBytes: Uint8Array): Generator<BSONEntry, nu
 		const bytes = offset === 0 ? EMPTY_VALUE : bsonBytes.subarray(readerIndex, readerIndex + offset)
 		readerIndex += offset
 
-		yield { key, type, bytes, index }
+		yield { key, type, bytes, index, [Symbol.for('nodejs.util.inspect.custom')]() { return JSON.stringify(this) } }
 		index += 1
 	}
 	return index

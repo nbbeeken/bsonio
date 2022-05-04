@@ -254,22 +254,21 @@ const buf = bufferFromHexArray([
 // const rec = doc.toRecord()
 // console.log(inspect(rec))
 // console.log(JSON.stringify(JSON.parse(doc.toEJSON()), undefined, 2))
-import { bsonDocument } from '../lib/mod.js'
-// const m = new Map(mappedEntriesFromBSON(buf))
-// console.log(m)
-// console.log(new Map(mappedEntriesFromBSON(m.get('c').bytes)))
+import { entriesFromBSON, mappedEntriesFromBSON } from '../lib/mod.js'
+const m = new Map(mappedEntriesFromBSON(buf))
+console.log(m)
 
-function coolTransform (entry, parent, root) {
-    if (entry){
-        entry.myProp = 1
-        return entry
-    } else if (parent) {
-        return parent
-    } else if (root) {
-        root.done = true
-    }
-}
-for (let index = 0; index < 100000000; index++) {
-    const doc = bsonDocument(buf, coolTransform)
-    // console.log(inspect(doc, {depth: Infinity, colors: true}));
-}
+// function coolTransform (entry, parent, root) {
+//     if (entry){
+//         entry.myProp = 1
+//         return entry
+//     } else if (parent) {
+//         return parent
+//     } else if (root) {
+//         root.done = true
+//     }
+// }
+// for (let index = 0; index < 100000000; index++) {
+//     const doc = bsonDocument(buf, coolTransform)
+//     // console.log(inspect(doc, {depth: Infinity, colors: true}));
+// }
